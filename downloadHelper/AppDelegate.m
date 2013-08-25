@@ -7,12 +7,15 @@
 //
 
 #import "AppDelegate.h"
+#import "downloadHelper.h"
 
 @implementation AppDelegate
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
 {
     // Override point for customization after application launch.
+    
+    [[downloadHelper sharedInstance] updateApplicationFilesInBucket:@"cncapplicationtest"];
     return YES;
 }
 							

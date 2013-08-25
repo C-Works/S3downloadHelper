@@ -23,6 +23,14 @@
 		FC2B911217C870A90019863A /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FC2B90ED17C870A90019863A /* Foundation.framework */; };
 		FC2B911A17C870A90019863A /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = FC2B911817C870A90019863A /* InfoPlist.strings */; };
 		FC2B911D17C870A90019863A /* downloadHelperTests.m in Sources */ = {isa = PBXBuildFile; fileRef = FC2B911C17C870A90019863A /* downloadHelperTests.m */; };
+		FC2B912717C871070019863A /* AWSS3.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FC2B912617C871070019863A /* AWSS3.framework */; };
+		FC2B912817C871070019863A /* AWSS3.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FC2B912617C871070019863A /* AWSS3.framework */; };
+		FC2B912A17C872730019863A /* AWSRuntime.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FC2B912917C872730019863A /* AWSRuntime.framework */; };
+		FC2B912B17C872730019863A /* AWSRuntime.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FC2B912917C872730019863A /* AWSRuntime.framework */; };
+		FC2B912E17C888C60019863A /* downloadHelper.m in Sources */ = {isa = PBXBuildFile; fileRef = FC2B912D17C888C60019863A /* downloadHelper.m */; };
+		FC2B912F17C888C60019863A /* downloadHelper.m in Sources */ = {isa = PBXBuildFile; fileRef = FC2B912D17C888C60019863A /* downloadHelper.m */; };
+		FC2B913217C88AF00019863A /* Constants.m in Sources */ = {isa = PBXBuildFile; fileRef = FC2B913117C88AF00019863A /* Constants.m */; };
+		FC2B913317C88AF00019863A /* Constants.m in Sources */ = {isa = PBXBuildFile; fileRef = FC2B913117C88AF00019863A /* Constants.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -58,6 +66,12 @@
 		FC2B911917C870A90019863A /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		FC2B911B17C870A90019863A /* downloadHelperTests.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = downloadHelperTests.h; sourceTree = "<group>"; };
 		FC2B911C17C870A90019863A /* downloadHelperTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = downloadHelperTests.m; sourceTree = "<group>"; };
+		FC2B912617C871070019863A /* AWSS3.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = AWSS3.framework; sourceTree = "<group>"; };
+		FC2B912917C872730019863A /* AWSRuntime.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = AWSRuntime.framework; sourceTree = "<group>"; };
+		FC2B912C17C888C60019863A /* downloadHelper.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = downloadHelper.h; sourceTree = "<group>"; };
+		FC2B912D17C888C60019863A /* downloadHelper.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = downloadHelper.m; sourceTree = "<group>"; };
+		FC2B913017C88AF00019863A /* Constants.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Constants.h; sourceTree = "<group>"; };
+		FC2B913117C88AF00019863A /* Constants.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = Constants.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -68,6 +82,8 @@
 				FC2B90EC17C870A90019863A /* UIKit.framework in Frameworks */,
 				FC2B90EE17C870A90019863A /* Foundation.framework in Frameworks */,
 				FC2B90F017C870A90019863A /* CoreGraphics.framework in Frameworks */,
+				FC2B912717C871070019863A /* AWSS3.framework in Frameworks */,
+				FC2B912A17C872730019863A /* AWSRuntime.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -78,6 +94,8 @@
 				FC2B911017C870A90019863A /* SenTestingKit.framework in Frameworks */,
 				FC2B911117C870A90019863A /* UIKit.framework in Frameworks */,
 				FC2B911217C870A90019863A /* Foundation.framework in Frameworks */,
+				FC2B912817C871070019863A /* AWSS3.framework in Frameworks */,
+				FC2B912B17C872730019863A /* AWSRuntime.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -106,6 +124,8 @@
 		FC2B90EA17C870A90019863A /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				FC2B912917C872730019863A /* AWSRuntime.framework */,
+				FC2B912617C871070019863A /* AWSS3.framework */,
 				FC2B90EB17C870A90019863A /* UIKit.framework */,
 				FC2B90ED17C870A90019863A /* Foundation.framework */,
 				FC2B90EF17C870A90019863A /* CoreGraphics.framework */,
@@ -122,6 +142,10 @@
 				FC2B910317C870A90019863A /* MainStoryboard.storyboard */,
 				FC2B910617C870A90019863A /* ViewController.h */,
 				FC2B910717C870A90019863A /* ViewController.m */,
+				FC2B912C17C888C60019863A /* downloadHelper.h */,
+				FC2B912D17C888C60019863A /* downloadHelper.m */,
+				FC2B913017C88AF00019863A /* Constants.h */,
+				FC2B913117C88AF00019863A /* Constants.m */,
 				FC2B90F217C870A90019863A /* Supporting Files */,
 			);
 			path = downloadHelper;
@@ -273,6 +297,8 @@
 				FC2B90F817C870A90019863A /* main.m in Sources */,
 				FC2B90FC17C870A90019863A /* AppDelegate.m in Sources */,
 				FC2B910817C870A90019863A /* ViewController.m in Sources */,
+				FC2B912E17C888C60019863A /* downloadHelper.m in Sources */,
+				FC2B913217C88AF00019863A /* Constants.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -281,6 +307,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				FC2B911D17C870A90019863A /* downloadHelperTests.m in Sources */,
+				FC2B912F17C888C60019863A /* downloadHelper.m in Sources */,
+				FC2B913317C88AF00019863A /* Constants.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -381,6 +409,10 @@
 		FC2B912117C870A90019863A /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"\"$(SRCROOT)\"",
+				);
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "downloadHelper/downloadHelper-Prefix.pch";
 				INFOPLIST_FILE = "downloadHelper/downloadHelper-Info.plist";
@@ -392,6 +424,10 @@
 		FC2B912217C870A90019863A /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"\"$(SRCROOT)\"",
+				);
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "downloadHelper/downloadHelper-Prefix.pch";
 				INFOPLIST_FILE = "downloadHelper/downloadHelper-Info.plist";
@@ -407,6 +443,7 @@
 				FRAMEWORK_SEARCH_PATHS = (
 					"\"$(SDKROOT)/Developer/Library/Frameworks\"",
 					"\"$(DEVELOPER_LIBRARY_DIR)/Frameworks\"",
+					"\"$(SRCROOT)\"",
 				);
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "downloadHelper/downloadHelper-Prefix.pch";
@@ -424,6 +461,7 @@
 				FRAMEWORK_SEARCH_PATHS = (
 					"\"$(SDKROOT)/Developer/Library/Frameworks\"",
 					"\"$(DEVELOPER_LIBRARY_DIR)/Frameworks\"",
+					"\"$(SRCROOT)\"",
 				);
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "downloadHelper/downloadHelper-Prefix.pch";

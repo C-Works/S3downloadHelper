@@ -7,15 +7,21 @@
 //
 
 #import "ViewController.h"
+#import <AWSRuntime/AWSRuntime.h>
+#import <AWSS3/AmazonS3Client.h>
+
+
 
 @interface ViewController ()
 
 @end
 
-@implementation ViewController
+@implementation ViewController 
 
 - (void)viewDidLoad
 {
+
+    
     [super viewDidLoad];
 	// Do any additional setup after loading the view, typically from a nib.
 }
