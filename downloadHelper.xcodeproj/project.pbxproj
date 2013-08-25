@@ -31,6 +31,8 @@
 		FC2B912F17C888C60019863A /* downloadHelper.m in Sources */ = {isa = PBXBuildFile; fileRef = FC2B912D17C888C60019863A /* downloadHelper.m */; };
 		FC2B913217C88AF00019863A /* Constants.m in Sources */ = {isa = PBXBuildFile; fileRef = FC2B913117C88AF00019863A /* Constants.m */; };
 		FC2B913317C88AF00019863A /* Constants.m in Sources */ = {isa = PBXBuildFile; fileRef = FC2B913117C88AF00019863A /* Constants.m */; };
+		FC2B913617C9AB470019863A /* S3ResponseHandler.m in Sources */ = {isa = PBXBuildFile; fileRef = FC2B913517C9AB470019863A /* S3ResponseHandler.m */; };
+		FC2B913717C9ADF60019863A /* S3ResponseHandler.m in Sources */ = {isa = PBXBuildFile; fileRef = FC2B913517C9AB470019863A /* S3ResponseHandler.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -72,6 +74,8 @@
 		FC2B912D17C888C60019863A /* downloadHelper.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = downloadHelper.m; sourceTree = "<group>"; };
 		FC2B913017C88AF00019863A /* Constants.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Constants.h; sourceTree = "<group>"; };
 		FC2B913117C88AF00019863A /* Constants.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = Constants.m; sourceTree = "<group>"; };
+		FC2B913417C9AB470019863A /* S3ResponseHandler.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = S3ResponseHandler.h; sourceTree = "<group>"; };
+		FC2B913517C9AB470019863A /* S3ResponseHandler.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = S3ResponseHandler.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -146,6 +150,8 @@
 				FC2B912D17C888C60019863A /* downloadHelper.m */,
 				FC2B913017C88AF00019863A /* Constants.h */,
 				FC2B913117C88AF00019863A /* Constants.m */,
+				FC2B913417C9AB470019863A /* S3ResponseHandler.h */,
+				FC2B913517C9AB470019863A /* S3ResponseHandler.m */,
 				FC2B90F217C870A90019863A /* Supporting Files */,
 			);
 			path = downloadHelper;
@@ -299,6 +305,7 @@
 				FC2B910817C870A90019863A /* ViewController.m in Sources */,
 				FC2B912E17C888C60019863A /* downloadHelper.m in Sources */,
 				FC2B913217C88AF00019863A /* Constants.m in Sources */,
+				FC2B913717C9ADF60019863A /* S3ResponseHandler.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -309,6 +316,7 @@
 				FC2B911D17C870A90019863A /* downloadHelperTests.m in Sources */,
 				FC2B912F17C888C60019863A /* downloadHelper.m in Sources */,
 				FC2B913317C88AF00019863A /* Constants.m in Sources */,
+				FC2B913617C9AB470019863A /* S3ResponseHandler.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -491,6 +499,7 @@
 				FC2B912217C870A90019863A /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 		FC2B912317C870A90019863A /* Build configuration list for PBXNativeTarget "downloadHelperTests" */ = {
 			isa = XCConfigurationList;
@@ -499,6 +508,7 @@
 				FC2B912517C870A90019863A /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};

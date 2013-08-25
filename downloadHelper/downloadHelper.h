@@ -9,6 +9,9 @@
 #import <Foundation/Foundation.h>
 #import <AWSRuntime/AWSRuntime.h>
 #import <AWSS3/AmazonS3Client.h>
+#import <AWSS3/AWSS3.h>
+
+
 #import <CommonCrypto/CommonDigest.h>
 #import "Constants.h"
 
@@ -19,42 +22,14 @@
 @interface downloadHelper : NSObject <AmazonServiceRequestDelegate>
 
 
--(void) updateApplicationFilesInBucket:(NSString*)bucket;
+- (id) initWithBucket:(NSString*)bucket;
+- (void) synchroniseBucket;
 
 
-
-/** Static method to obtain the Registry singleton.
- */
-+ (downloadHelper*)sharedInstance;
-
-/** Overide method to ensure that a second singleton cannot be created, calling this will return the singleton object.
- */
-+ (id)alloc;
-
-/** Overide method to ensure that a second singleton cannot be created, calling this will return the singleton object.
- */
-+ (id)allocWithZone:(NSZone *)zone;
-
-/** Overide method to ensure that a second singleton cannot be created, calling this will return the singleton object.
- */
-- (id)copyWithZone:(NSZone *)zone;
-
-/** Overide method to ensure that a second singleton cannot be created, calling this will return the singleton object.
- */
-- (id)retain;
-
-/** Overide method to ensure that a second singleton cannot be created, calling this will return the singleton object.
- */
-- (unsigned)retainCount;
-
-/** Overide method to ensure that a second singleton cannot be created, calling this will return the singleton object.
- */
-- (void)release;
-
-/** Overide method to ensure that a second singleton cannot be created, calling this will return the singleton object.
- */
-- (id)autorelease;
-
-
+//-(void)request:(AmazonServiceRequest*)request didFailWithError:(NSError*)error;
+//-(void)request:(AmazonServiceRequest*)request didFailWithServiceException:(NSException*)theException;
+//-(void)request:(AmazonServiceRequest*)request didReceiveResponse:(NSURLResponse*)response;
+//-(void)request:(AmazonServiceRequest*)request didCompleteWithResponse:(AmazonServiceResponse*)response;
+//-(void)request:(AmazonServiceRequest*)request didReceiveData:(NSData*)data;
 
 @end

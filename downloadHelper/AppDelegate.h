@@ -7,9 +7,14 @@
 //
 
 #import <UIKit/UIKit.h>
+#import "downloadHelper.h"
+
 
 @interface AppDelegate : UIResponder <UIApplicationDelegate>
 
 @property (strong, nonatomic) UIWindow *window;
+
+@property (strong, nonatomic) downloadHelper *d;
+
 
 @end

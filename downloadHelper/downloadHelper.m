@@ -7,90 +7,57 @@
 //
 
 #import "downloadHelper.h"
+#import "S3ResponseHandler.h"
+
 
 @implementation downloadHelper
+{
+    AmazonS3Client      *_s3;
+    NSString            *_bucket;
+    NSMutableData       *_downloadData;
+    NSString            *_filePathToSaveTo;
+    float               _downloadProgress;
+    long long           _expectedContentLength;
+    S3ResponseHandler   *_s3ResponseHandler;
+    S3GetObjectRequest  *_getObjectRequest;
+    S3GetObjectResponse *_getObjectResponse;
+}
 
-static downloadHelper *_sharedInstance;
+- (id)initWithBucket:(NSString*)bucket
+{
+    self = [super init];
+    if( self ){
 
-#pragma mark -
-#pragma mark Singleton Methods
+        _s3 = [[AmazonS3Client alloc] initWithAccessKey:dhKey withSecretKey: dhSec];
+        //_s3.timeout = 10000;
+        _s3.endpoint = [AmazonEndpoints s3Endpoint: EU_WEST_1 ];
 
-+ (downloadHelper*)sharedInstance {
-    @synchronized(self){
-        if(_sharedInstance == nil) {
-            [self allocWithZone:nil];
-            
-        }
+        
+        if ( ! _s3 ) return nil;
+        if ( ! bucket ) return nil;
+        _bucket = bucket;
     }
-    return _sharedInstance;
+    return self;
 }
 
-+ (id)alloc{
-    return _sharedInstance;
-}
-
-+ (id)allocWithZone:(NSZone *)zone {
-    
-    // If no registry, use threadsafe method to create.
-    if( ! _sharedInstance ){
-        static dispatch_once_t oncePredicate;
-        dispatch_once(&oncePredicate, ^{
-            _sharedInstance = [[super allocWithZone:nil] init];
-        });
-    }
-    return _sharedInstance;
-}
-
-- (id)copyWithZone:(NSZone *)zone {
-	return self;
-}
-
-#if (!__has_feature(objc_arc))
-
-- (id)retain {
-    
-	return self;
-}
-
-- (unsigned)retainCount {
-	return UINT_MAX;  //denotes an object that cannot be released
-}
-
-- (void)release {
-	//do nothing
-}
-
-- (id)autorelease {
-	return self;
-}
-#endif
-
-#pragma mark -
-#pragma mark Persistence Methods
-
-
-
--(void) updateApplicationFilesInBucket:(NSString*)bucket{
+-(void) synchroniseBucket{
 
     NSString *root = [NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) objectAtIndex: 0 ];
     NSFileManager *fileManager = [NSFileManager defaultManager];//[[NSFileManager alloc] init];
-    NSString *path;
+    NSString *filePath;
     NSError *error;
-    NSMutableArray *requestQueue;
     BOOL isDir;
     BOOL pathExists;
-    S3Request *request;
     
-    AmazonS3Client *s3 = [[AmazonS3Client alloc] initWithAccessKey:dhKey withSecretKey: dhSec];
-    
-    NSArray *objects = [s3 listObjectsInBucket: bucket ];
+    NSArray *objects = [_s3 listObjectsInBucket: _bucket ];
 
-    for( S3ObjectSummary *o in objects){
+    //for( S3ObjectSummary *o in objects){
         
-        path = [root stringByAppendingPathComponent: o.key ];
+    S3ObjectSummary *o = [objects objectAtIndex:1];
+     
+        filePath = [root stringByAppendingPathComponent: o.key ];
         
-        
-        pathExists = [fileManager fileExistsAtPath: path isDirectory: &isDir ];
+        pathExists = [fileManager fileExistsAtPath: filePath isDirectory: &isDir ];
 
         // Object is a folder...
         if ( [o.key hasSuffix: @"/" ]  ){
@@ -101,7 +68,7 @@ static downloadHelper *_sharedInstance;
             }
             else if( !pathExists ){
                 // The folder doesn't exist so should be created...
-                [fileManager createDirectoryAtPath:path withIntermediateDirectories:YES attributes:nil error:&error ];
+                [fileManager createDirectoryAtPath:filePath withIntermediateDirectories:YES attributes:nil error:&error ];
             }
             else{
                 // The folder exists already...
@@ -118,39 +85,76 @@ static downloadHelper *_sharedInstance;
 
                 //Create file on the S3 folder..
 
-                request = [[S3GetObjectRequest alloc ] initWithKey: o.key withBucket: bucket ];
-                [requestQueue addObject: request];
-                request.delegate = self;
-                NSLog(@"%@", o.key);
+                
+                [AmazonLogger verboseLogging];
+
+                _s3ResponseHandler = [[S3ResponseHandler alloc] init];
+                _getObjectRequest = [[S3GetObjectRequest alloc] initWithKey: o.key withBucket: _bucket];
+                [_getObjectRequest setDelegate: _s3ResponseHandler];
+                
+                //When using delegates the return is nil.
+                _getObjectResponse = [_s3 getObject: _getObjectRequest];
+
+                NSLog(@"Error: %@", _getObjectResponse.error.localizedDescription);
+                
+//                [self downloadKey:o.key];
+//                _filePathToSaveTo = [root stringByAppendingPathComponent: @"test.png" ];
             
             }
-            else if( !( [[ self objectS3eTag: o ] isEqualToString:[ downloadHelper fileMD5: path ] ] ) ){
+            else if( !( [[ self objectS3eTag: o ] isEqualToString:[ downloadHelper fileMD5: filePath ] ] ) ){
                 // File exists but the MD5 has changed on the bucket, need to update...
 
-                request = [[S3GetObjectRequest alloc ] initWithKey: o.key withBucket: bucket ];
-                [requestQueue addObject: request];
-                request.delegate = self;
-                NSLog(@"needs update");
+//                [self downloadKey:o.key];
+//                _filePathToSaveTo = filePath;
             }
         }
-
-    }
+    //}
     
-   // S3GetObjectResponse *r = [ s3 getObject: g ];
-
-    
-
 }
 
 
 -(void) downloadKey:(NSString*)key{
-    AmazonS3Client *s3 = [[AmazonS3Client alloc] initWithAccessKey:dhKey withSecretKey: dhSec];
-    S3GetObjectRequest *gor = [[S3GetObjectRequest alloc ] initWithKey: key withBucket: bucket ];
-    gor.delegate = self;
-    self.data=[[NSMutableData alloc] init ];
-    [s3Client getObject:gor];
+    
+    _getObjectRequest = [[S3GetObjectRequest alloc ] initWithKey: key withBucket: _bucket ];
+    [_getObjectRequest setDelegate: self];
+    _downloadData = [ [ NSMutableData alloc ] init ];
+    _getObjectResponse = [_s3 getObject: _getObjectRequest];
+    NSLog(@"Error: %@", _getObjectResponse.error.localizedDescription);
 }
 
+
+
+// ---------------------------------------------------------------------------------------------------------------------
+
+-(void)request:(AmazonServiceRequest *)request didFailWithError:(NSError *)error{
+    NSLog(@"%@", error.localizedDescription);
+}
+
+-(void)request:(AmazonServiceRequest *)request didFailWithServiceException:(NSException *)theException{
+    NSLog(@"didFailWithServiceException : %@", theException);
+}
+
+-(void)request:(AmazonServiceRequest *)request didReceiveResponse:(NSURLResponse *)response{
+    _expectedContentLength = response.expectedContentLength;
+}
+
+-(void)request:(AmazonServiceRequest *)request didCompleteWithResponse:(AmazonServiceResponse *)response{
+    if (response.exception == nil) {
+        if ([request isKindOfClass:[S3GetObjectRequest class]]) {
+            [_downloadData writeToFile: _filePathToSaveTo atomically:YES];
+            _downloadProgress = 1.0;
+            _downloadData = nil;
+        }
+    }
+}
+
+-(void)request:(AmazonServiceRequest*)request didReceiveData:(NSData*)data{
+    [ _downloadData appendData: data];
+    _downloadProgress = (float)[ _downloadData length] / (float)_expectedContentLength;
+    NSLog(@"Progress: %f", _downloadProgress);
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
 - (NSString*)objectS3eTag:(S3ObjectSummary*)object{
     
     NSString *s;
