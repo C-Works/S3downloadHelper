@@ -13,25 +13,22 @@
  * permissions and limitations under the License.
  */
 
-#import <AWSRuntime/AWSRuntime.h>
+#import "S3RequestHandlerDelegateProtocol.h"
 
-@interface S3ResponseHandler:NSObject<AmazonServiceRequestDelegate>
-{
-    UILabel *bytesIn;
-    UILabel *bytesOut;
+@class AmazonServiceResponse;
+@class S3ObjectSummary;
+@class AmazonS3Client;
 
-    @public
-    AmazonServiceResponse *response;
-    NSException           *exception;
-    NSError               *error;
-}
+
+@interface S3RequestHandler:NSObject 
 
 @property (nonatomic, readonly) AmazonServiceResponse *response;
 @property (nonatomic, readonly) NSError               *error;
 @property (nonatomic, readonly) NSException           *exception;
-@property (nonatomic, retain)   UILabel               *bytesIn;
-@property (nonatomic, retain)   UILabel               *bytesOut;
+
+@property (nonatomic, weak) id <S3RequestHandlerDelegateProtocol> delegate;
 
 -(bool)isFinishedOrFailed;
+-(id)initWithS3Obj:(S3ObjectSummary*)obj inBucket:(NSString*)bucket destPath:(NSString*)path withS3client:(AmazonS3Client*)client error:(NSError*)error;
 
 @end

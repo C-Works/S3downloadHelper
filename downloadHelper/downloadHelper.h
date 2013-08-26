@@ -11,6 +11,7 @@
 #import <AWSS3/AmazonS3Client.h>
 #import <AWSS3/AWSS3.h>
 
+#import "S3RequestHandlerDelegateProtocol.h"
 
 #import <CommonCrypto/CommonDigest.h>
 #import "Constants.h"
@@ -19,17 +20,18 @@
 #define CHUNK_SIZE 100000
 
 
-@interface downloadHelper : NSObject <AmazonServiceRequestDelegate>
+@interface downloadHelper : NSObject <S3RequestHandlerDelegateProtocol>
 
+- (id)initWithS3Client:(AmazonS3Client*)client forBucket:(NSString*)bucket;
 
-- (id) initWithBucket:(NSString*)bucket;
 - (void) synchroniseBucket;
 
 
-//-(void)request:(AmazonServiceRequest*)request didFailWithError:(NSError*)error;
-//-(void)request:(AmazonServiceRequest*)request didFailWithServiceException:(NSException*)theException;
-//-(void)request:(AmazonServiceRequest*)request didReceiveResponse:(NSURLResponse*)response;
-//-(void)request:(AmazonServiceRequest*)request didCompleteWithResponse:(AmazonServiceResponse*)response;
-//-(void)request:(AmazonServiceRequest*)request didReceiveData:(NSData*)data;
+// S3RequestHandlerDelegateProtocol
+
+- (void)downloadComplete:(S3RequestHandler *)request;
+- (void)downloadFailedWithError:(NSError *)error;
+- (void)downloadFailedWithException:(NSException*)exception;
+
 
 @end

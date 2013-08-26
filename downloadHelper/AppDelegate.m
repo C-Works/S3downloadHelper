@@ -7,22 +7,30 @@
 //
 
 #import "AppDelegate.h"
+#import "Constants.h"
+
+#import <AWSS3/AmazonS3Client.h>
 
 @implementation AppDelegate
 {
     downloadHelper *_d;
+    AmazonS3Client *_s3;
 }
 
-@synthesize d = _d;
+@synthesize d  = _d;
+@synthesize s3 = _s3;
+
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
 {
     // Override point for customization after application launch.
     
     
+    _s3 = [[AmazonS3Client alloc] initWithAccessKey:dhKey withSecretKey: dhSec];
+    _s3.endpoint = [AmazonEndpoints s3Endpoint: S3ENDPOINT ];
+    _s3.timeout = 10000;
     
-    _d = [[downloadHelper alloc ] initWithBucket:@"cncapplicationtest"];
-    
+    _d = [[downloadHelper alloc ]initWithS3Client:_s3 forBucket: @"cncapplicationtest"];
     [_d synchroniseBucket];
 
     return YES;

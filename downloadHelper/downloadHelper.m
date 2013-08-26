@@ -7,57 +7,73 @@
 //
 
 #import "downloadHelper.h"
-#import "S3ResponseHandler.h"
+#import "S3RequestHandler.h"
 
 
-@implementation downloadHelper
+
+@interface downloadHelper () <S3RequestHandlerDelegateProtocol>
 {
     AmazonS3Client      *_s3;
     NSString            *_bucket;
-    NSMutableData       *_downloadData;
-    NSString            *_filePathToSaveTo;
-    float               _downloadProgress;
-    long long           _expectedContentLength;
-    S3ResponseHandler   *_s3ResponseHandler;
-    S3GetObjectRequest  *_getObjectRequest;
-    S3GetObjectResponse *_getObjectResponse;
+    
+    NSArray             *_S3ObjectList;
+    NSMutableDictionary *_S3FileObjects;
+    NSMutableDictionary *_S3FileStatus;
+    NSMutableArray      *_requestHandlers;
 }
+@end
 
-- (id)initWithBucket:(NSString*)bucket
+@implementation downloadHelper
+
+- (id)initWithS3Client:(AmazonS3Client*)client forBucket:(NSString*)bucket
 {
     self = [super init];
     if( self ){
-
-        _s3 = [[AmazonS3Client alloc] initWithAccessKey:dhKey withSecretKey: dhSec];
-        //_s3.timeout = 10000;
-        _s3.endpoint = [AmazonEndpoints s3Endpoint: EU_WEST_1 ];
-
         
-        if ( ! _s3 ) return nil;
+        if ( ! client ) return nil;
         if ( ! bucket ) return nil;
+        
+        _s3     = client;
         _bucket = bucket;
+
+        _S3FileObjects   = [[NSMutableDictionary alloc] init];
+        _requestHandlers = [[NSMutableArray alloc] init];
+        
     }
     return self;
 }
 
--(void) synchroniseBucket{
-
-    NSString *root = [NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) objectAtIndex: 0 ];
-    NSFileManager *fileManager = [NSFileManager defaultManager];//[[NSFileManager alloc] init];
-    NSString *filePath;
-    NSError *error;
-    BOOL isDir;
-    BOOL pathExists;
+-(void)downloadComplete:(S3RequestHandler *)request{
     
-    NSArray *objects = [_s3 listObjectsInBucket: _bucket ];
+}
+-(void)downloadFailedWithError:(NSError *)error{
+    
+}
+- (void)downloadFailedWithException:(NSException*)exception{
+    
+}
 
-    //for( S3ObjectSummary *o in objects){
+-(void)synchroniseBucket{
+   [self performSelectorInBackground:@selector(asyncSynchroniseBucket) withObject:nil];
+}
+
+-(void)asyncSynchroniseBucket{
+    _S3ObjectList = [_s3 listObjectsInBucket: _bucket ];
+    [self performSelectorOnMainThread:@selector(syncSynchroniseBucket) withObject:nil waitUntilDone:NO];
+}
+
+-(void)syncSynchroniseBucket{
+    NSError *error;
+    
+    NSString *root = [NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) objectAtIndex: 0 ];
+    NSFileManager *fileManager = [NSFileManager defaultManager];
+    
+
+    for( S3ObjectSummary *o in _S3ObjectList){
         
-    S3ObjectSummary *o = [objects objectAtIndex:1];
-     
-        filePath = [root stringByAppendingPathComponent: o.key ];
-        
-        pathExists = [fileManager fileExistsAtPath: filePath isDirectory: &isDir ];
+        NSString *filePath = [root stringByAppendingPathComponent: o.key ];
+        BOOL isDir;
+        BOOL pathExists = [fileManager fileExistsAtPath: filePath isDirectory: &isDir ];
 
         // Object is a folder...
         if ( [o.key hasSuffix: @"/" ]  ){
@@ -75,85 +91,41 @@
             }
         
         }// Object is a file
-        else{
+        else  if( !( [[ self objectS3eTag: o ] isEqualToString:[ downloadHelper fileMD5: filePath ] ] ) ){
+            [_S3FileStatus  setObject: @"Pending" forKey: o.key ];
+            [_S3FileObjects setObject: o forKey: o.key];
+        }
+    }
+        
+    for( NSString *key in _S3FileObjects ){
+        
+        S3ObjectSummary *o = [_S3FileObjects objectForKey: key ];
+        
+        NSString *filePath = [root stringByAppendingPathComponent: o.key ];
+        BOOL isDir;
+        BOOL pathExists = [fileManager fileExistsAtPath: filePath isDirectory: &isDir ];
 
-            if( pathExists && isDir ){
+        if( pathExists && isDir ){
                 // This file is a folder, need to delete.
-                NSLog(@"isDirectory");
-            }
-            else if( !pathExists ){
-
+            NSLog(@"isDirectory");
+        }
+        else if( !pathExists ){
                 //Create file on the S3 folder..
+//                [AmazonLogger verboseLogging];
 
-                
-                [AmazonLogger verboseLogging];
-
-                _s3ResponseHandler = [[S3ResponseHandler alloc] init];
-                _getObjectRequest = [[S3GetObjectRequest alloc] initWithKey: o.key withBucket: _bucket];
-                [_getObjectRequest setDelegate: _s3ResponseHandler];
-                
-                //When using delegates the return is nil.
-                _getObjectResponse = [_s3 getObject: _getObjectRequest];
-
-                NSLog(@"Error: %@", _getObjectResponse.error.localizedDescription);
-                
-//                [self downloadKey:o.key];
-//                _filePathToSaveTo = [root stringByAppendingPathComponent: @"test.png" ];
-            
-            }
-            else if( !( [[ self objectS3eTag: o ] isEqualToString:[ downloadHelper fileMD5: filePath ] ] ) ){
+            S3RequestHandler *r = [[S3RequestHandler alloc] initWithS3Obj:o inBucket:_bucket destPath:filePath withS3client:_s3 error:error ];
+            [_requestHandlers addObject:r];
+        }
+        else if( !( [[ self objectS3eTag: o ] isEqualToString:[ downloadHelper fileMD5: filePath ] ] ) ){
                 // File exists but the MD5 has changed on the bucket, need to update...
 
 //                [self downloadKey:o.key];
 //                _filePathToSaveTo = filePath;
-            }
         }
-    //}
-    
-}
 
-
--(void) downloadKey:(NSString*)key{
-    
-    _getObjectRequest = [[S3GetObjectRequest alloc ] initWithKey: key withBucket: _bucket ];
-    [_getObjectRequest setDelegate: self];
-    _downloadData = [ [ NSMutableData alloc ] init ];
-    _getObjectResponse = [_s3 getObject: _getObjectRequest];
-    NSLog(@"Error: %@", _getObjectResponse.error.localizedDescription);
-}
-
-
-
-// ---------------------------------------------------------------------------------------------------------------------
-
--(void)request:(AmazonServiceRequest *)request didFailWithError:(NSError *)error{
-    NSLog(@"%@", error.localizedDescription);
-}
-
--(void)request:(AmazonServiceRequest *)request didFailWithServiceException:(NSException *)theException{
-    NSLog(@"didFailWithServiceException : %@", theException);
-}
-
--(void)request:(AmazonServiceRequest *)request didReceiveResponse:(NSURLResponse *)response{
-    _expectedContentLength = response.expectedContentLength;
-}
-
--(void)request:(AmazonServiceRequest *)request didCompleteWithResponse:(AmazonServiceResponse *)response{
-    if (response.exception == nil) {
-        if ([request isKindOfClass:[S3GetObjectRequest class]]) {
-            [_downloadData writeToFile: _filePathToSaveTo atomically:YES];
-            _downloadProgress = 1.0;
-            _downloadData = nil;
-        }
     }
+    
 }
-
--(void)request:(AmazonServiceRequest*)request didReceiveData:(NSData*)data{
-    [ _downloadData appendData: data];
-    _downloadProgress = (float)[ _downloadData length] / (float)_expectedContentLength;
-    NSLog(@"Progress: %f", _downloadProgress);
-}
-
 // ---------------------------------------------------------------------------------------------------------------------
 - (NSString*)objectS3eTag:(S3ObjectSummary*)object{
     

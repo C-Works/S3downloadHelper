@@ -14,7 +14,8 @@
 
 @property (strong, nonatomic) UIWindow *window;
 
-@property (strong, nonatomic) downloadHelper *d;
+@property (nonatomic, strong) downloadHelper *d;
+@property (nonatomic, strong) AmazonS3Client *s3;
 
 
 @end
