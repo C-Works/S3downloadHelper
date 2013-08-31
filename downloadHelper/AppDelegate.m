@@ -25,7 +25,6 @@
 {
     // Override point for customization after application launch.
     
-    
     _s3 = [[AmazonS3Client alloc] initWithAccessKey:dhKey withSecretKey: dhSec];
     _s3.endpoint = [AmazonEndpoints s3Endpoint: S3ENDPOINT ];
     _s3.timeout = 10000;

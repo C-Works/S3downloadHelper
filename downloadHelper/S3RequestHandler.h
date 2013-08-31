@@ -19,16 +19,28 @@
 @class S3ObjectSummary;
 @class AmazonS3Client;
 
+typedef enum{
+    DOWNLOADING,
+    FAILED,
+    COMPLETE
+} REQUEST_STATE;
+
 
 @interface S3RequestHandler:NSObject 
 
 @property (nonatomic, readonly) AmazonServiceResponse *response;
 @property (nonatomic, readonly) NSError               *error;
 @property (nonatomic, readonly) NSException           *exception;
+@property (nonatomic, readonly) S3ObjectSummary       *S3ObjectSummary;
+
+@property (nonatomic, readonly) int                   attempts;
+@property (nonatomic, readonly) REQUEST_STATE         status;
 
 @property (nonatomic, weak) id <S3RequestHandlerDelegateProtocol> delegate;
 
--(bool)isFinishedOrFailed;
 -(id)initWithS3Obj:(S3ObjectSummary*)obj inBucket:(NSString*)bucket destPath:(NSString*)path withS3client:(AmazonS3Client*)client error:(NSError*)error;
+
+- (void)tryDownload;
+- (void)cancelDownload;
 
 @end

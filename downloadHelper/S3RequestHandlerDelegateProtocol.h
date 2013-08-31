@@ -16,8 +16,8 @@
 
 @required
 
-- (void)downloadComplete:( S3RequestHandler * )request;
-- (void)downloadFailedWithError:(NSError*)error;
-- (void)downloadFailedWithException:(NSException*)exception;
+- (void)downloadFinished:( S3RequestHandler * )request;
+- (void)downloadFailed:( S3RequestHandler * )request WithError:(NSError*)error;
+- (void)downloadFailed:( S3RequestHandler * )request WithException:(NSException*)exception;
 
 @end

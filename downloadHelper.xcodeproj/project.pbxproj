@@ -33,6 +33,8 @@
 		FC2B913317C88AF00019863A /* Constants.m in Sources */ = {isa = PBXBuildFile; fileRef = FC2B913117C88AF00019863A /* Constants.m */; };
 		FC2B913617C9AB470019863A /* S3RequestHandler.m in Sources */ = {isa = PBXBuildFile; fileRef = FC2B913517C9AB470019863A /* S3RequestHandler.m */; };
 		FC2B913717C9ADF60019863A /* S3RequestHandler.m in Sources */ = {isa = PBXBuildFile; fileRef = FC2B913517C9AB470019863A /* S3RequestHandler.m */; };
+		FC5B8AB117D1980700E9E96E /* SystemConfiguration.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FC5B8AB017D1980700E9E96E /* SystemConfiguration.framework */; };
+		FCFA21AB17D1852B0007729B /* Reachability.m in Sources */ = {isa = PBXBuildFile; fileRef = FCFA21AA17D1852B0007729B /* Reachability.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -76,7 +78,10 @@
 		FC2B913117C88AF00019863A /* Constants.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = Constants.m; sourceTree = "<group>"; };
 		FC2B913417C9AB470019863A /* S3RequestHandler.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = S3RequestHandler.h; sourceTree = "<group>"; };
 		FC2B913517C9AB470019863A /* S3RequestHandler.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = S3RequestHandler.m; sourceTree = "<group>"; };
+		FC5B8AB017D1980700E9E96E /* SystemConfiguration.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SystemConfiguration.framework; path = System/Library/Frameworks/SystemConfiguration.framework; sourceTree = SDKROOT; };
 		FCFA217617CA45490007729B /* S3RequestHandlerDelegateProtocol.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = S3RequestHandlerDelegateProtocol.h; sourceTree = "<group>"; };
+		FCFA21A917D1852B0007729B /* Reachability.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Reachability.h; sourceTree = "<group>"; };
+		FCFA21AA17D1852B0007729B /* Reachability.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = Reachability.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -84,6 +89,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				FC5B8AB117D1980700E9E96E /* SystemConfiguration.framework in Frameworks */,
 				FC2B90EC17C870A90019863A /* UIKit.framework in Frameworks */,
 				FC2B90EE17C870A90019863A /* Foundation.framework in Frameworks */,
 				FC2B90F017C870A90019863A /* CoreGraphics.framework in Frameworks */,
@@ -129,6 +135,7 @@
 		FC2B90EA17C870A90019863A /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				FC5B8AB017D1980700E9E96E /* SystemConfiguration.framework */,
 				FC2B912917C872730019863A /* AWSRuntime.framework */,
 				FC2B912617C871070019863A /* AWSS3.framework */,
 				FC2B90EB17C870A90019863A /* UIKit.framework */,
@@ -152,6 +159,8 @@
 				FC2B913017C88AF00019863A /* Constants.h */,
 				FC2B913117C88AF00019863A /* Constants.m */,
 				FCFA217617CA45490007729B /* S3RequestHandlerDelegateProtocol.h */,
+				FCFA21A917D1852B0007729B /* Reachability.h */,
+				FCFA21AA17D1852B0007729B /* Reachability.m */,
 				FC2B913417C9AB470019863A /* S3RequestHandler.h */,
 				FC2B913517C9AB470019863A /* S3RequestHandler.m */,
 				FC2B90F217C870A90019863A /* Supporting Files */,
@@ -308,6 +317,7 @@
 				FC2B912E17C888C60019863A /* downloadHelper.m in Sources */,
 				FC2B913217C88AF00019863A /* Constants.m in Sources */,
 				FC2B913717C9ADF60019863A /* S3RequestHandler.m in Sources */,
+				FCFA21AB17D1852B0007729B /* Reachability.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

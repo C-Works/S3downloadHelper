@@ -17,112 +17,136 @@
 
 #import <AWSRuntime/AWSRuntime.h>
 #import <AWSS3/AmazonS3Client.h>
-#import <AWSS3/AWSS3.h>
+//#import <AWSS3/AWSS3.h>
 
 @interface S3RequestHandler () <AmazonServiceRequestDelegate>
 {
-    float                   _downloadProgress;
-    long long               _expectedContentLength;
-    NSMutableData           *_downloadData;
-    NSString                *_filePathToSaveTo;
+    int                     _attempts;
     
+    float                   _downloadProgress;
+    long long               _totalTransfered;
+    long long               _expectedContentLength;
+    NSString                *_path;
     
     S3GetObjectRequest      *_getObjectRequest;
     S3GetObjectResponse     *_getObjectResponse;
-    S3ObjectSummary         *_object;
+    S3ObjectSummary         *_S3ObjectSummary;
     AmazonS3Client          *_client;
     NSString                *_bucket;
     
     AmazonServiceResponse   *_response;
     NSException             *_exception;
     NSError                 *_error;
+    
+    NSOutputStream          *_outputStream;
 }
 @end
 
 @implementation S3RequestHandler
 
-@synthesize response    = _response;
-@synthesize error       = _error;
-@synthesize exception   = _exception;
-@synthesize delegate    = _delegate;
+@synthesize attempts        = _attempts;
+@synthesize status          = _status;
+
+@synthesize response        = _response;
+@synthesize error           = _error;
+@synthesize exception       = _exception;
+@synthesize delegate        = _delegate;
+@synthesize S3ObjectSummary = _S3ObjectSummary;
+
 
 -(id)initWithS3Obj:(S3ObjectSummary*)obj inBucket:(NSString*)bucket destPath:(NSString*)path withS3client:(AmazonS3Client*)client error:(NSError*)error
 {
     self = [super init];
     if (self)
     {
-        _response  = nil;
-        _exception = nil;
-        _downloadData = [[NSMutableData alloc]init];
-        _filePathToSaveTo = path;
-        _bucket = bucket;
-        _object = obj;
-        _client = client;
-        _error = error;
+        _S3ObjectSummary    = obj;
+        _bucket             = bucket;
+        _path               = path;
+        _client             = client;
+        _error              = error;
         
-        _getObjectRequest = [[S3GetObjectRequest alloc] initWithKey: _object.key withBucket: _bucket];
-        [_getObjectRequest setDelegate: self ];
+        _attempts           = 0;
+        _status             = DOWNLOADING;
         
-        //When using delegates the return is nil.
-        _getObjectResponse = [_client getObject: _getObjectRequest];
+        [self tryDownload];
     }
     return self;
 }
 
--(bool)isFinishedOrFailed
-{
-    return (_response != nil || _error != nil || _exception != nil);
+- (void)tryDownload{
+    if(_outputStream != nil){
+        [_outputStream close];
+    }
+    _response               = nil;
+    _exception              = nil;
+    _totalTransfered        = 0;
+    _expectedContentLength  = 1;
+
+    _attempts              += 1;
+    _status                 = DOWNLOADING;
+
+    _outputStream = [[ NSOutputStream alloc ] initToFileAtPath: _path append:NO ];
+    [_outputStream open];
+    
+    _getObjectRequest   = [[S3GetObjectRequest alloc] initWithKey: _S3ObjectSummary.key withBucket: _bucket];
+    _getObjectRequest.outputStream  = _outputStream;
+    _getObjectRequest.delegate      = self;
+    _getObjectResponse  = [_client getObject: _getObjectRequest];
 }
 
--(void)request:(AmazonServiceRequest *)request didReceiveResponse:(NSURLResponse *)aResponse
-{
+-(void)cancelDownload{
+    NSError *error;
+    [[NSFileManager defaultManager] removeItemAtPath: _path error: &error];
+}
+
+-(void)request:(AmazonServiceRequest *)request didReceiveResponse:(NSURLResponse *)aResponse{
     _expectedContentLength = aResponse.expectedContentLength;
 }
 
 -(void)request:(AmazonServiceRequest *)request didCompleteWithResponse:(AmazonServiceResponse *)aResponse
 {
-    if (aResponse.exception == nil) {
-        if ( [ request isKindOfClass:[ S3GetObjectRequest class ] ] ) {
-            [_downloadData writeToFile: _filePathToSaveTo atomically:YES];
-            _downloadProgress = 1.0;
-            _downloadData = nil;
-        }
+    // Close the stream, check there are no exceptions, if not set progress and status complete call the downloadFinished
+    // method on the delegate. If exceptions report exceptions and delete the temporary file.
+    NSError *error;
+    [_outputStream close];
+
+    if ( aResponse.exception == nil && [ request isKindOfClass:[ S3GetObjectRequest class ] ] ) {
+        _downloadProgress = 1.0;
+        _status           = COMPLETE;
+        [_delegate downloadFinished: self];
     }
-
-    [_delegate downloadComplete:self];
-
+    else{
+        _status = FAILED;
+        [ _delegate downloadFailed: self WithException: aResponse.exception ];
+        [[NSFileManager defaultManager] removeItemAtPath: _path error:&error];
+    }
 }
 
 -(void)request:(AmazonServiceRequest *)request didReceiveData:(NSData *)data
 {
-    [ _downloadData appendData: data];
-    _downloadProgress = (float)[ _downloadData length] / (float)_expectedContentLength;
+    _totalTransfered += [data length];
+    _downloadProgress = (float)_totalTransfered / (float)_expectedContentLength;
     NSLog(@"Progress: %f", _downloadProgress);
-
 }
-
 
 -(void)request:(AmazonServiceRequest *)request didFailWithError:(NSError *)theError
 {
-    _error = theError;
-    NSLog(@"didFailWithError : %@", _error.localizedDescription);
-    [_delegate downloadFailedWithError: _error];
+    // Close the streat, delete the failed download and report the failure.
+    [_outputStream close];
+    [[NSFileManager defaultManager] removeItemAtPath: _path error: &theError];
+    [_delegate downloadFailed: self WithError: theError ];
 }
 
 -(void)request:(AmazonServiceRequest *)request didFailWithServiceException:(NSException *)theException
 {
-    _exception = theException;
-    NSLog(@"didFailWithServiceException : %@", _exception);
-    [_delegate downloadFailedWithException: _exception];
+    // Close the streat, delete the failed download and report the failure.
+    NSError *error;
+    [_outputStream close];
+    [[NSFileManager defaultManager] removeItemAtPath: _path error:&error];
+    [_delegate downloadFailed: self WithException: _exception];
 }
 
 
--(void)saveDataToFile{
-
-    if(true){
-        [_downloadData writeToFile: _filePathToSaveTo atomically:YES];
-    }
-}
 
 @end
 

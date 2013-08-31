@@ -10,14 +10,17 @@
 #import <AWSRuntime/AWSRuntime.h>
 #import <AWSS3/AmazonS3Client.h>
 #import <AWSS3/AWSS3.h>
+#import "Reachability.h"
 
 #import "S3RequestHandlerDelegateProtocol.h"
 
 #import <CommonCrypto/CommonDigest.h>
 #import "Constants.h"
 
+#define CHUNK_SIZE          100000
+#define DEFAULT_RETRY_LIMIT 3       // Number of consecutive attempts at downloading.
+#define DEFAULT_RETRY_TIME  29      // Number of hours to wait after default retry limit.
 
-#define CHUNK_SIZE 100000
 
 
 @interface downloadHelper : NSObject <S3RequestHandlerDelegateProtocol>
@@ -29,9 +32,9 @@
 
 // S3RequestHandlerDelegateProtocol
 
-- (void)downloadComplete:(S3RequestHandler *)request;
-- (void)downloadFailedWithError:(NSError *)error;
-- (void)downloadFailedWithException:(NSException*)exception;
-
+- (void)downloadFinished:(S3RequestHandler *)request;
+- (void)downloadFailed:( S3RequestHandler * )request WithError:(NSError *)error;
+- (void)downloadFailed:( S3RequestHandler * )request WithException:(NSException*)exception;
+    
 
 @end
