@@ -10,14 +10,18 @@
 
 
 @class S3RequestHandler;
+@class Reachability;
 
 @protocol S3RequestHandlerDelegateProtocol <NSObject>
+
+
+@optional
 
 
 @required
 
 - (void)downloadFinished:( S3RequestHandler * )request;
-- (void)downloadFailed:( S3RequestHandler * )request WithError:(NSError*)error;
-- (void)downloadFailed:( S3RequestHandler * )request WithException:(NSException*)exception;
+- (void)downloadFailed:( S3RequestHandler * )request;
+- (BOOL)isReachable;
 
 @end

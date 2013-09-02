@@ -8,19 +8,16 @@
 
 #import "downloadHelper.h"
 #import "S3RequestHandler.h"
-#import <UIKit/UIKit.h>
 
-//@class Reachability;
-
-
-
+@class Reachability;
+@class S3RequestHandler;
 
 @interface downloadHelper () <S3RequestHandlerDelegateProtocol>
 {
     AmazonS3Client      *_s3;
+    
     NSString            *_bucket;
     
-    int                 _retryLimit;
     int                 _retryTime;
     
     NSArray             *_S3BucketObjectList;
@@ -29,10 +26,13 @@
     NSMutableDictionary *_S3ObjectSummaries;
 
     Reachability        *_bucketReachability;
+    SYNC_STATUS         _status;
 }
 @end
 
 @implementation downloadHelper
+
+@synthesize bucketReachability = _bucketReachability;
 
 - (id)initWithS3Client:(AmazonS3Client*)client forBucket:(NSString*)bucket
 {
@@ -44,26 +44,82 @@
         
         _s3                 = client;
         _bucket             = bucket;
-        _retryLimit         = DEFAULT_RETRY_LIMIT;
         _retryTime          = DEFAULT_RETRY_TIME;
+        _status             = dhINITIALISED;
         
         _S3RequestHandlers  = [[NSMutableDictionary alloc] init];
         _S3ObjectSummaries  = [[NSMutableDictionary alloc] init];
         
-        
-        [[NSNotificationCenter defaultCenter] addObserver: self selector: @selector(reachabilityChanged:) name: kReachabilityChangedNotification object: nil];
-        
+        // Get the bucket host for reachability observer from a urlRequest object
         S3GetPreSignedURLRequest *urlRequest = [[S3GetPreSignedURLRequest alloc] init];
-        urlRequest.protocol = @"https";
         urlRequest.bucket = _bucket;
         urlRequest.endpoint = _s3.endpoint;
-        NSString *bucketURL = [urlRequest.url absoluteString];
-
-        _bucketReachability = [Reachability reachabilityWithHostname: [urlRequest.url absoluteString] ];
+        NSString *bucketURL = urlRequest.host;
+        
+        _bucketReachability = [Reachability reachabilityWithHostname: bucketURL ];
         _bucketReachability.reachableOnWWAN = YES;
+        
+        __weak typeof(self) weakSelf = self;
+        _bucketReachability.reachableBlock = ^(Reachability*reach){
+            NSLog(@"S3 Bucket REACHABLE!");
+            [weakSelf resumeSynchronisation];
+        };
+        
+        _bucketReachability.unreachableBlock = ^(Reachability*reach){
+            NSLog(@"S3 Bucket UNREACHABLE!");
+            [weakSelf suspendSynchronisation];
+        };
+
         [_bucketReachability startNotifier];
     }
     return self;
+}
+
+-(void)resumeSynchronisation{
+    if ( [ _bucketReachability isReachable] && _status != dhDOWNLOADING && _status != dhCOMPLETE ){
+        NSLog(@"synchronisationResumed");
+        _status = dhDOWNLOADING;
+        [self performSelectorInBackground:@selector(asyncSynchroniseBucket) withObject:nil];
+    }
+}
+
+- (void)suspendSynchronisation{
+    if( _status != dhSUSPENDED ){
+        _status = dhSUSPENDED;
+        NSLog(@"synchronisationSuspended");
+        
+        for( NSString *key in _S3RequestHandlers )
+        {
+            S3RequestHandler *s3rh      = [ _S3RequestHandlers objectForKey: key ];
+            switch (s3rh.state) {
+                case INITIALISED:
+                    NSLog(@"[INITIALISED]:%@", key);
+                    break;
+                case DOWNLOADING:
+                    NSLog(@"Suspend:%@", key);
+                    [s3rh suspendDownload];
+                    break;
+                case CANCELLED:
+                    NSLog(@"[CANCELLED]:%@", key);
+                    break;
+                case COMPLETE:
+                    NSLog(@"[COMPLETE]:%@", key);
+                    break;
+                case FAILED:
+                    NSLog(@"[FAILED]:%@", key);
+                    break;
+                case SUSPENDED:
+                    NSLog(@"[SUSPENDED]:%@", key);
+                    break;
+            }
+        }
+    }
+}
+
+
+
+-(BOOL)isReachable{
+    return _bucketReachability.isReachable;
 }
 
 -(void)downloadFinished:(S3RequestHandler *)request{
@@ -73,8 +129,8 @@
     
     for ( NSString *key in _S3RequestHandlers ){
         S3RequestHandler *s3rh = [ _S3RequestHandlers objectForKey: key ];
-        if ( s3rh.status != COMPLETE ) downloadComplete = false;
-        if ( s3rh.status != FAILED   ) downloadFailed   = false;
+        if ( s3rh.state != COMPLETE ) downloadComplete = false;
+        if ( s3rh.state != FAILED   ) downloadFailed   = false;
     }
         
     if ( downloadComplete ){
@@ -87,31 +143,17 @@
     }
 }
 
--(void)downloadFailed:( S3RequestHandler * )request WithError:(NSError *)error{
-    if ( request.attempts < _retryLimit ){
-        [request tryDownload];
-    }
-    else{
-        [self downloadFinished: request];
-    }
-}
-- (void)downloadFailed:( S3RequestHandler * )request WithException:(NSException*)exception{
-    if ( request.attempts < _retryLimit ){
-        [request tryDownload];
-    }
-    else{
-        [self downloadFinished: request];
-    }
+
+
+- (void)downloadFailed:( S3RequestHandler * )request{
+    NSLog(@"Failed Download Retry: %@", request.S3ObjectSummary.key);
     
+    [request tryDownload];
 }
 
--(void)synchroniseBucket{
-   [self performSelectorInBackground:@selector(asyncSynchroniseBucket) withObject:nil];
-}
 
 -(void)asyncSynchroniseBucket{
     _S3BucketObjectList = [_s3 listObjectsInBucket: _bucket ];
-    
     [self performSelectorOnMainThread:@selector(syncSynchroniseBucket) withObject:nil waitUntilDone:NO];
 }
 
@@ -119,6 +161,7 @@
     NSError *error;
     NSString *root = [NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) objectAtIndex: 0 ];
     NSFileManager *fileManager = [NSFileManager defaultManager];
+    
     
     // Clean out the object summaries, ready to create a new list of current download needs.
     _S3ObjectSummaries  = [[NSMutableDictionary alloc] init];
@@ -143,9 +186,9 @@
             else{
                 // The folder exists already...
             }
-        
-        }// Object is a file, make a list of all objects that need downloading (new or changed)
-        else  if( !( [[ self objectS3eTag: S3summary ] isEqualToString:[ downloadHelper fileMD5: filePath ] ] ) ){
+        }
+        // Object is a file, make a list of all objects that need downloading (new or changed)
+        else  if( ! [downloadHelper validateMD5forSummary:S3summary withPath:filePath] ){
             [_S3ObjectSummaries setObject: S3summary forKey: S3summary.key];
         }
     }
@@ -157,6 +200,7 @@
         S3RequestHandler *s3rh      = [ _S3RequestHandlers objectForKey: key ];
         
         NSString *filePath = [root stringByAppendingPathComponent: key ];
+
         BOOL isDir;
         BOOL pathExists = [fileManager fileExistsAtPath: filePath isDirectory: &isDir ];
 
@@ -170,14 +214,30 @@
                 // Add a request handler if non exists for this key
                 s3rh = [[S3RequestHandler alloc] initWithS3Obj:S3summary inBucket:_bucket destPath:filePath withS3client:_s3 error:error ];
                 s3rh.delegate = self;
+                [s3rh tryDownload ];
             }
             [ refreshedS3RequestHandlers setObject: s3rh forKey: key ];
             [_S3RequestHandlers removeObjectForKey: S3summary.key ];
         }
-        else if( !( [[ self objectS3eTag: S3summary ] isEqualToString:[ downloadHelper fileMD5: filePath ] ] ) ){
-            // File exists but the MD5 has changed on the bucket, need to update...
-//                [self downloadKey:o.key];
-//                _filePathToSaveTo = filePath;
+        else if( ! [downloadHelper validateMD5forSummary:S3summary withPath: filePath] ){
+            if ( s3rh.state == SUSPENDED ){
+                [s3rh tryDownload];
+                NSLog(@"Request Handler Exists");
+            }
+            else if(s3rh.state == DOWNLOADING ){
+                NSLog(@"Auto-restarted.");
+            }
+            else{
+                // File exists but the MD5 has changed on the bucket, need to update...
+                [fileManager removeItemAtPath: filePath error: &error];
+                
+                s3rh = [[S3RequestHandler alloc] initWithS3Obj:S3summary inBucket:_bucket destPath:filePath withS3client:_s3 error:error ];
+                s3rh.delegate = self;
+                [s3rh tryDownload ];
+            }
+            
+            [ refreshedS3RequestHandlers setObject: s3rh forKey: key ];
+            [_S3RequestHandlers removeObjectForKey: S3summary.key ];
         }
     }
     
@@ -191,34 +251,20 @@
 
 
 // ---------------------------------------------------------------------------------------------------------------------
-//Called by Reachability whenever status changes.
-- (void) reachabilityChanged: (NSNotification* )note
-{
-    Reachability* receivedReachability = [note object];
-    if( ![receivedReachability isKindOfClass: [Reachability class]] )
-    {
-        NSLog(@"Report Error, invalid calss passed from notification center");
-    }
-    if( _bucketReachability.isReachableViaWiFi )    NSLog( @"Wifi is available.");
-    else                                            NSLog( @"Wifi is not available.");
-    if( _bucketReachability.isReachableViaWWAN )    NSLog( @"WWAN is available.");
-    else                                            NSLog( @"WWAN is not available.");
-}
 
-
-// ---------------------------------------------------------------------------------------------------------------------
-- (NSString*)objectS3eTag:(S3ObjectSummary*)object{
-    
-    NSString *s;
++(BOOL)validateMD5forSummary:(S3ObjectSummary*)object withPath:(NSString*)path{
+    NSString *eTagMD5;
+    NSString *fileMD5;
     NSString *eTag;
     
     eTag = object.etag;
-        
-    s = [eTag stringByTrimmingCharactersInSet: [NSCharacterSet characterSetWithCharactersInString:@"\""]];
     
-    return s;
+    eTagMD5 = [eTag stringByTrimmingCharactersInSet: [NSCharacterSet characterSetWithCharactersInString:@"\""]];
+    fileMD5 = [self fileMD5: path];
+    
+    return [eTagMD5 isEqualToString: fileMD5];
+    
 }
-
 
 +(NSString*)fileMD5:(NSString*)path
 {

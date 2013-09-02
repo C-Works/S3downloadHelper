@@ -312,7 +312,7 @@ static void TMReachabilityCallback(SCNetworkReachabilityRef target, SCNetworkRea
 {
     BOOL connectionUP = YES;
     
-    if(!(flags & kSCNetworkReachabilityFlagsReachable))
+    if(! ( flags & kSCNetworkReachabilityFlagsReachable ))
         connectionUP = NO;
     
     if( (flags & testcase) == testcase )
@@ -340,7 +340,7 @@ static void TMReachabilityCallback(SCNetworkReachabilityRef target, SCNetworkRea
     if(!SCNetworkReachabilityGetFlags(self.reachabilityRef, &flags))
         return NO;
     
-    return [self isReachableWithFlags:flags];
+    return [self isReachableWithFlags: flags ];
 }
 
 -(BOOL)isReachableViaWWAN

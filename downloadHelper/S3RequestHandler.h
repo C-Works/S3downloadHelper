@@ -14,19 +14,31 @@
  */
 
 #import "S3RequestHandlerDelegateProtocol.h"
+#import "Reachability.h"
+#import "downloadHelper.h"
+
 
 @class AmazonServiceResponse;
 @class S3ObjectSummary;
 @class AmazonS3Client;
 
+#define DEFAULT_RETRY_LIMIT 3       // Number of consecutive attempts at downloading.
+
+
 typedef enum{
+    INITIALISED,
     DOWNLOADING,
     FAILED,
-    COMPLETE
+    COMPLETE,
+    SUSPENDED,
+    CANCELLED
 } REQUEST_STATE;
 
 
-@interface S3RequestHandler:NSObject 
+@interface S3RequestHandler:NSObject
+{
+    
+}
 
 @property (nonatomic, readonly) AmazonServiceResponse *response;
 @property (nonatomic, readonly) NSError               *error;
@@ -34,13 +46,15 @@ typedef enum{
 @property (nonatomic, readonly) S3ObjectSummary       *S3ObjectSummary;
 
 @property (nonatomic, readonly) int                   attempts;
-@property (nonatomic, readonly) REQUEST_STATE         status;
+@property (nonatomic, readonly) REQUEST_STATE         state;
 
 @property (nonatomic, weak) id <S3RequestHandlerDelegateProtocol> delegate;
 
 -(id)initWithS3Obj:(S3ObjectSummary*)obj inBucket:(NSString*)bucket destPath:(NSString*)path withS3client:(AmazonS3Client*)client error:(NSError*)error;
 
-- (void)tryDownload;
+//- (REQUEST_STATE)status;
+- (BOOL)tryDownload;
 - (void)cancelDownload;
+- (void)suspendDownload;
 
 @end

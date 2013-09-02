@@ -18,23 +18,32 @@
 #import "Constants.h"
 
 #define CHUNK_SIZE          100000
-#define DEFAULT_RETRY_LIMIT 3       // Number of consecutive attempts at downloading.
 #define DEFAULT_RETRY_TIME  29      // Number of hours to wait after default retry limit.
 
+typedef enum{
+    dhDOWNLOADING,
+    dhSUSPENDED,
+    dhCOMPLETE,
+    dhINITIALISED
+} SYNC_STATUS;
 
 
 @interface downloadHelper : NSObject <S3RequestHandlerDelegateProtocol>
 
 - (id)initWithS3Client:(AmazonS3Client*)client forBucket:(NSString*)bucket;
 
-- (void) synchroniseBucket;
+- (void) resumeSynchronisation;
+- (void) suspendSynchronisation;
 
 
 // S3RequestHandlerDelegateProtocol
 
 - (void)downloadFinished:(S3RequestHandler *)request;
-- (void)downloadFailed:( S3RequestHandler * )request WithError:(NSError *)error;
-- (void)downloadFailed:( S3RequestHandler * )request WithException:(NSException*)exception;
-    
+
++ (BOOL)validateMD5forSummary:(S3ObjectSummary*)object withPath:(NSString*)path;
++(NSString*)fileMD5:(NSString*)path;
+
+@property (strong, atomic) Reachability        *bucketReachability;
+
 
 @end
