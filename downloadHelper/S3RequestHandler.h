@@ -17,27 +17,26 @@
 #import "Reachability.h"
 #import "downloadHelper.h"
 
-
 @class AmazonServiceResponse;
 @class S3ObjectSummary;
 @class AmazonS3Client;
 
-#define DEFAULT_RETRY_LIMIT 3       // Number of consecutive attempts at downloading.
-
+#define DEFAULT_RETRY_LIMIT 3           // Number of consecutive attempts at downloading.
+#define DOWNLOAD_BLOCK_SIZE 1048576     // Number of bytes to try and download at one time.
 
 typedef enum{
     INITIALISED,
     DOWNLOADING,
-    FAILED,
-    COMPLETE,
+    BLOCKCOMPLETE,
     SUSPENDED,
-    CANCELLED
+    FAILED,
+    TRANSFERED,
+    SAVED
 } REQUEST_STATE;
 
 
 @interface S3RequestHandler:NSObject
 {
-    
 }
 
 @property (nonatomic, readonly) AmazonServiceResponse *response;
@@ -47,14 +46,16 @@ typedef enum{
 
 @property (nonatomic, readonly) int                   attempts;
 @property (nonatomic, readonly) REQUEST_STATE         state;
+@property (nonatomic, readonly) NSString              *eTag;
 
 @property (nonatomic, weak) id <S3RequestHandlerDelegateProtocol> delegate;
 
 -(id)initWithS3Obj:(S3ObjectSummary*)obj inBucket:(NSString*)bucket destPath:(NSString*)path withS3client:(AmazonS3Client*)client error:(NSError*)error;
 
 //- (REQUEST_STATE)status;
-- (BOOL)tryDownload;
-- (void)cancelDownload;
-- (void)suspendDownload;
+-(BOOL)suspend;
+-(BOOL)reset;
+-(BOOL)download;
+-(BOOL)save;
 
 @end

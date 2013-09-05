@@ -95,14 +95,15 @@
                 case INITIALISED:
                     NSLog(@"[INITIALISED]:%@", key);
                     break;
+                case BLOCKCOMPLETE:
                 case DOWNLOADING:
                     NSLog(@"Suspend:%@", key);
-                    [s3rh suspendDownload];
+                    [s3rh suspend];
                     break;
-                case CANCELLED:
+                case SAVED:
                     NSLog(@"[CANCELLED]:%@", key);
                     break;
-                case COMPLETE:
+                case TRANSFERED:
                     NSLog(@"[COMPLETE]:%@", key);
                     break;
                 case FAILED:
@@ -129,7 +130,7 @@
     
     for ( NSString *key in _S3RequestHandlers ){
         S3RequestHandler *s3rh = [ _S3RequestHandlers objectForKey: key ];
-        if ( s3rh.state != COMPLETE ) downloadComplete = false;
+        if ( s3rh.state != TRANSFERED ) downloadComplete = false;
         if ( s3rh.state != FAILED   ) downloadFailed   = false;
     }
         
@@ -148,7 +149,8 @@
 - (void)downloadFailed:( S3RequestHandler * )request{
     NSLog(@"Failed Download Retry: %@", request.S3ObjectSummary.key);
     
-    [request tryDownload];
+    [request reset];
+    [request download];
 }
 
 
@@ -214,26 +216,24 @@
                 // Add a request handler if non exists for this key
                 s3rh = [[S3RequestHandler alloc] initWithS3Obj:S3summary inBucket:_bucket destPath:filePath withS3client:_s3 error:error ];
                 s3rh.delegate = self;
-                [s3rh tryDownload ];
+                [s3rh download ];
             }
             [ refreshedS3RequestHandlers setObject: s3rh forKey: key ];
             [_S3RequestHandlers removeObjectForKey: S3summary.key ];
         }
         else if( ! [downloadHelper validateMD5forSummary:S3summary withPath: filePath] ){
-            if ( s3rh.state == SUSPENDED ){
-                [s3rh tryDownload];
-                NSLog(@"Request Handler Exists");
-            }
-            else if(s3rh.state == DOWNLOADING ){
-                NSLog(@"Auto-restarted.");
-            }
-            else{
+            
+            NSString *md5 = [S3summary.etag stringByTrimmingCharactersInSet: [NSCharacterSet characterSetWithCharactersInString:@"\""]];
+            if ( [md5 isEqualToString: s3rh.eTag ] ){
+                // Restart download.
+                NSLog(@"HELPER - ReStart");
+                //[s3rh download];
+                NSLog(@"HELPER - Started");
+            }else{
                 // File exists but the MD5 has changed on the bucket, need to update...
-                [fileManager removeItemAtPath: filePath error: &error];
-                
                 s3rh = [[S3RequestHandler alloc] initWithS3Obj:S3summary inBucket:_bucket destPath:filePath withS3client:_s3 error:error ];
                 s3rh.delegate = self;
-                [s3rh tryDownload ];
+                [s3rh download ];
             }
             
             [ refreshedS3RequestHandlers setObject: s3rh forKey: key ];
@@ -243,7 +243,7 @@
     
     // Purge old request handlers and cancel them before deleting. Update _S3RequestHandlers with RefreshedHandlers
     for( NSString *key in _S3ObjectSummaries ){
-        [[ _S3RequestHandlers objectForKey: key ] cancelDownload ];
+        [[ _S3RequestHandlers objectForKey: key ] reset ];
         [ _S3RequestHandlers removeObjectForKey: key ];
     }
     _S3RequestHandlers = refreshedS3RequestHandlers;
@@ -265,6 +265,13 @@
     return [eTagMD5 isEqualToString: fileMD5];
     
 }
+
+
++(BOOL)validateMD5forFile:(NSString*)md5 withPath:(NSString*)path{
+
+    return [ md5 isEqualToString: [ self fileMD5: path ] ];
+}
+
 
 +(NSString*)fileMD5:(NSString*)path
 {

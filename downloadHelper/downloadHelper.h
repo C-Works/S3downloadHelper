@@ -41,6 +41,9 @@ typedef enum{
 - (void)downloadFinished:(S3RequestHandler *)request;
 
 + (BOOL)validateMD5forSummary:(S3ObjectSummary*)object withPath:(NSString*)path;
+
++ (BOOL)validateMD5forFile:(NSString*)md5 withPath:(NSString*)path;
+
 +(NSString*)fileMD5:(NSString*)path;
 
 @property (strong, atomic) Reachability        *bucketReachability;
