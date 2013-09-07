@@ -24,10 +24,22 @@
 #define DEFAULT_RETRY_LIMIT 3           // Number of consecutive attempts at downloading.
 #define DOWNLOAD_BLOCK_SIZE 1048576     // Number of bytes to try and download at one time.
 
+
+enum S3DHErrorCodes {
+    S3DH_RHANDLER_SUCCESS = 0,         // Default Code if there is no error.
+    S3DH_RHANDLER_NIL_CLIENT,
+    S3DH_RHANDLER_NIL_BUCKET,
+    S3DH_RHANDLER_NIL_DELEGATE,
+    S3DH_RHANDLER_NIL_SUMMARY,
+    S3DH_RHANDLER_FILE_UNWRITABLE,     // Reset method can't confirm writtability to specified location.
+    S3DH_RHANDLER_FILE_CREATE_FAIL,
+    S3DH_RHANDLER_FILE_INIT_FAIL,
+    S3DH_RHANDLER_FOLDER_FAIL
+};
+
 typedef enum{
     INITIALISED,
     DOWNLOADING,
-    BLOCKCOMPLETE,
     SUSPENDED,
     FAILED,
     TRANSFERED,
@@ -39,6 +51,9 @@ typedef enum{
 {
 }
 
+@property (nonatomic, readonly) float                   progress;
+@property (nonatomic, readonly) NSString                *key;
+
 @property (nonatomic, readonly) AmazonServiceResponse *response;
 @property (nonatomic, readonly) NSError               *error;
 @property (nonatomic, readonly) NSException           *exception;
@@ -46,16 +61,20 @@ typedef enum{
 
 @property (nonatomic, readonly) int                   attempts;
 @property (nonatomic, readonly) REQUEST_STATE         state;
-@property (nonatomic, readonly) NSString              *eTag;
+@property (nonatomic, readonly) NSString              *md5;
 
 @property (nonatomic, weak) id <S3RequestHandlerDelegateProtocol> delegate;
 
--(id)initWithS3Obj:(S3ObjectSummary*)obj inBucket:(NSString*)bucket destPath:(NSString*)path withS3client:(AmazonS3Client*)client error:(NSError*)error;
+-(id)initWithS3ObjectSummary:(S3ObjectSummary*)s S3Client:(AmazonS3Client*)c bucket:(NSString*)b  delegate:(id)d error:(NSError*)e;
 
 //- (REQUEST_STATE)status;
--(BOOL)suspend;
--(BOOL)reset;
--(BOOL)download;
--(BOOL)save;
+- (BOOL)suspend;
+- (BOOL)reset;
+- (BOOL)download;
+- (BOOL)persist;
+
+
+- (void)interruptedDownload;
+- (void) rhError:(int)code data:(NSString*)data error:(NSError**)errorp;
 
 @end

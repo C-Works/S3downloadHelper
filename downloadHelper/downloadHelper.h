@@ -20,13 +20,6 @@
 #define CHUNK_SIZE          100000
 #define DEFAULT_RETRY_TIME  29      // Number of hours to wait after default retry limit.
 
-typedef enum{
-    dhDOWNLOADING,
-    dhSUSPENDED,
-    dhCOMPLETE,
-    dhINITIALISED
-} SYNC_STATUS;
-
 
 @interface downloadHelper : NSObject <S3RequestHandlerDelegateProtocol>
 
@@ -39,6 +32,9 @@ typedef enum{
 // S3RequestHandlerDelegateProtocol
 
 - (void)downloadFinished:(S3RequestHandler *)request;
+- (NSString*)downloadFilePath:(S3RequestHandler*)S3RequestHandler;
+- (NSString*)persistedFilePath:(S3RequestHandler*)S3RequestHandler;
+
 
 + (BOOL)validateMD5forSummary:(S3ObjectSummary*)object withPath:(NSString*)path;
 
@@ -46,7 +42,8 @@ typedef enum{
 
 +(NSString*)fileMD5:(NSString*)path;
 
-@property (strong, atomic) Reachability        *bucketReachability;
+@property (strong, atomic) Reachability             *bucketReachability;
+@property (atomic, readonly) SYNC_STATUS            status;
 
 
 @end

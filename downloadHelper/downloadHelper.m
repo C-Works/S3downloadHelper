@@ -27,12 +27,14 @@
 
     Reachability        *_bucketReachability;
     SYNC_STATUS         _status;
+    Boolean             _isEnabled;
 }
 @end
 
 @implementation downloadHelper
 
-@synthesize bucketReachability = _bucketReachability;
+@synthesize bucketReachability  = _bucketReachability;
+@synthesize status              = _status;
 
 - (id)initWithS3Client:(AmazonS3Client*)client forBucket:(NSString*)bucket
 {
@@ -46,6 +48,7 @@
         _bucket             = bucket;
         _retryTime          = DEFAULT_RETRY_TIME;
         _status             = dhINITIALISED;
+        _isEnabled     = YES;
         
         _S3RequestHandlers  = [[NSMutableDictionary alloc] init];
         _S3ObjectSummaries  = [[NSMutableDictionary alloc] init];
@@ -79,6 +82,7 @@
     if ( [ _bucketReachability isReachable] && _status != dhDOWNLOADING && _status != dhCOMPLETE ){
         NSLog(@"synchronisationResumed");
         _status = dhDOWNLOADING;
+        _isEnabled = YES;
         [self performSelectorInBackground:@selector(asyncSynchroniseBucket) withObject:nil];
     }
 }
@@ -86,6 +90,7 @@
 - (void)suspendSynchronisation{
     if( _status != dhSUSPENDED ){
         _status = dhSUSPENDED;
+        _isEnabled = NO;
         NSLog(@"synchronisationSuspended");
         
         for( NSString *key in _S3RequestHandlers )
@@ -95,22 +100,21 @@
                 case INITIALISED:
                     NSLog(@"[INITIALISED]:%@", key);
                     break;
-                case BLOCKCOMPLETE:
                 case DOWNLOADING:
                     NSLog(@"Suspend:%@", key);
                     [s3rh suspend];
                     break;
-                case SAVED:
-                    NSLog(@"[CANCELLED]:%@", key);
+                case SUSPENDED:
+                    NSLog(@"[SUSPENDED]:%@", key);
                     break;
                 case TRANSFERED:
                     NSLog(@"[COMPLETE]:%@", key);
                     break;
+                case SAVED:
+                    NSLog(@"[CANCELLED]:%@", key);
+                    break;
                 case FAILED:
                     NSLog(@"[FAILED]:%@", key);
-                    break;
-                case SUSPENDED:
-                    NSLog(@"[SUSPENDED]:%@", key);
                     break;
             }
         }
@@ -119,11 +123,14 @@
 
 
 
--(BOOL)isReachable{
-    return _bucketReachability.isReachable;
+-(BOOL)downloadEnable{
+    return _bucketReachability.isReachable && _isEnabled;
 }
 
 -(void)downloadFinished:(S3RequestHandler *)request{
+
+    
+    [request persist];
     
     BOOL downloadComplete   = true;
     BOOL downloadFailed     = true;
@@ -143,6 +150,7 @@
         [self performSelector: @selector(synchroniseBucket) withObject: nil afterDelay: delay ];
     }
 }
+
 
 
 
@@ -177,17 +185,18 @@
         // Object is a folder...
         if ( [S3summary.key hasSuffix: @"/" ]  ){
 
-            if( pathExists && !isDir ){
+/*            if( pathExists && !isDir ){
                 // This folder exists as a file, it should be deleted...
                 
             }
             else if( !pathExists ){
                 // The folder doesn't exist so should be created...
                 [fileManager createDirectoryAtPath:filePath withIntermediateDirectories:YES attributes:nil error:&error ];
+                NSLog(@"error:%@", error.localizedDescription);
             }
             else{
                 // The folder exists already...
-            }
+            }*/
         }
         // Object is a file, make a list of all objects that need downloading (new or changed)
         else  if( ! [downloadHelper validateMD5forSummary:S3summary withPath:filePath] ){
@@ -214,8 +223,7 @@
             //Create file on the S3 folder..
             if ( ! s3rh ){
                 // Add a request handler if non exists for this key
-                s3rh = [[S3RequestHandler alloc] initWithS3Obj:S3summary inBucket:_bucket destPath:filePath withS3client:_s3 error:error ];
-                s3rh.delegate = self;
+                s3rh = [[S3RequestHandler alloc] initWithS3ObjectSummary:S3summary S3Client:_s3 bucket:_bucket delegate:self error:error];
                 [s3rh download ];
             }
             [ refreshedS3RequestHandlers setObject: s3rh forKey: key ];
@@ -224,15 +232,14 @@
         else if( ! [downloadHelper validateMD5forSummary:S3summary withPath: filePath] ){
             
             NSString *md5 = [S3summary.etag stringByTrimmingCharactersInSet: [NSCharacterSet characterSetWithCharactersInString:@"\""]];
-            if ( [md5 isEqualToString: s3rh.eTag ] ){
+            if ( [md5 isEqualToString: s3rh.md5 ] ){
                 // Restart download.
                 NSLog(@"HELPER - ReStart");
                 //[s3rh download];
                 NSLog(@"HELPER - Started");
             }else{
                 // File exists but the MD5 has changed on the bucket, need to update...
-                s3rh = [[S3RequestHandler alloc] initWithS3Obj:S3summary inBucket:_bucket destPath:filePath withS3client:_s3 error:error ];
-                s3rh.delegate = self;
+                s3rh = [[S3RequestHandler alloc] initWithS3ObjectSummary:S3summary S3Client:_s3 bucket:_bucket delegate:self error:error];
                 [s3rh download ];
             }
             
@@ -247,6 +254,19 @@
         [ _S3RequestHandlers removeObjectForKey: key ];
     }
     _S3RequestHandlers = refreshedS3RequestHandlers;
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+
+- (NSString*)downloadPath:(S3RequestHandler*)S3RequestHandler{
+    
+    NSString *root = [NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) objectAtIndex: 0 ];
+    return [root stringByAppendingPathComponent: S3RequestHandler.key ];
+}
+
+- (NSString*)persistPath:(S3RequestHandler*)S3RequestHandler{
+    NSString *root = [NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) objectAtIndex: 0 ];
+    return [root stringByAppendingPathComponent: @"saved/files/myfile.png" ];
 }
 
 
