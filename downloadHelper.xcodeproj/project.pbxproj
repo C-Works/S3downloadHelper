@@ -27,12 +27,12 @@
 		FC2B912817C871070019863A /* AWSS3.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FC2B912617C871070019863A /* AWSS3.framework */; };
 		FC2B912A17C872730019863A /* AWSRuntime.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FC2B912917C872730019863A /* AWSRuntime.framework */; };
 		FC2B912B17C872730019863A /* AWSRuntime.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FC2B912917C872730019863A /* AWSRuntime.framework */; };
-		FC2B912E17C888C60019863A /* downloadHelper.m in Sources */ = {isa = PBXBuildFile; fileRef = FC2B912D17C888C60019863A /* downloadHelper.m */; };
-		FC2B912F17C888C60019863A /* downloadHelper.m in Sources */ = {isa = PBXBuildFile; fileRef = FC2B912D17C888C60019863A /* downloadHelper.m */; };
+		FC2B912E17C888C60019863A /* S3SyncHelper.m in Sources */ = {isa = PBXBuildFile; fileRef = FC2B912D17C888C60019863A /* S3SyncHelper.m */; };
+		FC2B912F17C888C60019863A /* S3SyncHelper.m in Sources */ = {isa = PBXBuildFile; fileRef = FC2B912D17C888C60019863A /* S3SyncHelper.m */; };
 		FC2B913217C88AF00019863A /* Constants.m in Sources */ = {isa = PBXBuildFile; fileRef = FC2B913117C88AF00019863A /* Constants.m */; };
 		FC2B913317C88AF00019863A /* Constants.m in Sources */ = {isa = PBXBuildFile; fileRef = FC2B913117C88AF00019863A /* Constants.m */; };
-		FC2B913617C9AB470019863A /* S3RequestHandler.m in Sources */ = {isa = PBXBuildFile; fileRef = FC2B913517C9AB470019863A /* S3RequestHandler.m */; };
-		FC2B913717C9ADF60019863A /* S3RequestHandler.m in Sources */ = {isa = PBXBuildFile; fileRef = FC2B913517C9AB470019863A /* S3RequestHandler.m */; };
+		FC2B913617C9AB470019863A /* S3RequestHelper.m in Sources */ = {isa = PBXBuildFile; fileRef = FC2B913517C9AB470019863A /* S3RequestHelper.m */; };
+		FC2B913717C9ADF60019863A /* S3RequestHelper.m in Sources */ = {isa = PBXBuildFile; fileRef = FC2B913517C9AB470019863A /* S3RequestHelper.m */; };
 		FC5B8AB117D1980700E9E96E /* SystemConfiguration.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FC5B8AB017D1980700E9E96E /* SystemConfiguration.framework */; };
 		FCFA21AB17D1852B0007729B /* Reachability.m in Sources */ = {isa = PBXBuildFile; fileRef = FCFA21AA17D1852B0007729B /* Reachability.m */; };
 /* End PBXBuildFile section */
@@ -72,14 +72,14 @@
 		FC2B911C17C870A90019863A /* downloadHelperTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = downloadHelperTests.m; sourceTree = "<group>"; };
 		FC2B912617C871070019863A /* AWSS3.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = AWSS3.framework; sourceTree = "<group>"; };
 		FC2B912917C872730019863A /* AWSRuntime.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = AWSRuntime.framework; sourceTree = "<group>"; };
-		FC2B912C17C888C60019863A /* downloadHelper.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = downloadHelper.h; sourceTree = "<group>"; };
-		FC2B912D17C888C60019863A /* downloadHelper.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = downloadHelper.m; sourceTree = "<group>"; };
+		FC2B912C17C888C60019863A /* S3SyncHelper.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = S3SyncHelper.h; sourceTree = "<group>"; };
+		FC2B912D17C888C60019863A /* S3SyncHelper.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = S3SyncHelper.m; sourceTree = "<group>"; };
 		FC2B913017C88AF00019863A /* Constants.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Constants.h; sourceTree = "<group>"; };
 		FC2B913117C88AF00019863A /* Constants.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = Constants.m; sourceTree = "<group>"; };
-		FC2B913417C9AB470019863A /* S3RequestHandler.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = S3RequestHandler.h; sourceTree = "<group>"; };
-		FC2B913517C9AB470019863A /* S3RequestHandler.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = S3RequestHandler.m; sourceTree = "<group>"; };
+		FC2B913417C9AB470019863A /* S3RequestHelper.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = S3RequestHelper.h; sourceTree = "<group>"; };
+		FC2B913517C9AB470019863A /* S3RequestHelper.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = S3RequestHelper.m; sourceTree = "<group>"; };
 		FC5B8AB017D1980700E9E96E /* SystemConfiguration.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SystemConfiguration.framework; path = System/Library/Frameworks/SystemConfiguration.framework; sourceTree = SDKROOT; };
-		FCFA217617CA45490007729B /* S3RequestHandlerDelegateProtocol.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = S3RequestHandlerDelegateProtocol.h; sourceTree = "<group>"; };
+		FCFA217617CA45490007729B /* S3RequestHelperDelegateProtocol.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = S3RequestHelperDelegateProtocol.h; sourceTree = "<group>"; };
 		FCFA21A917D1852B0007729B /* Reachability.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Reachability.h; sourceTree = "<group>"; };
 		FCFA21AA17D1852B0007729B /* Reachability.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = Reachability.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -154,15 +154,15 @@
 				FC2B910317C870A90019863A /* MainStoryboard.storyboard */,
 				FC2B910617C870A90019863A /* ViewController.h */,
 				FC2B910717C870A90019863A /* ViewController.m */,
-				FC2B912C17C888C60019863A /* downloadHelper.h */,
-				FC2B912D17C888C60019863A /* downloadHelper.m */,
+				FC2B912C17C888C60019863A /* S3SyncHelper.h */,
+				FC2B912D17C888C60019863A /* S3SyncHelper.m */,
 				FC2B913017C88AF00019863A /* Constants.h */,
 				FC2B913117C88AF00019863A /* Constants.m */,
-				FCFA217617CA45490007729B /* S3RequestHandlerDelegateProtocol.h */,
+				FCFA217617CA45490007729B /* S3RequestHelperDelegateProtocol.h */,
 				FCFA21A917D1852B0007729B /* Reachability.h */,
 				FCFA21AA17D1852B0007729B /* Reachability.m */,
-				FC2B913417C9AB470019863A /* S3RequestHandler.h */,
-				FC2B913517C9AB470019863A /* S3RequestHandler.m */,
+				FC2B913417C9AB470019863A /* S3RequestHelper.h */,
+				FC2B913517C9AB470019863A /* S3RequestHelper.m */,
 				FC2B90F217C870A90019863A /* Supporting Files */,
 			);
 			path = downloadHelper;
@@ -314,9 +314,9 @@
 				FC2B90F817C870A90019863A /* main.m in Sources */,
 				FC2B90FC17C870A90019863A /* AppDelegate.m in Sources */,
 				FC2B910817C870A90019863A /* ViewController.m in Sources */,
-				FC2B912E17C888C60019863A /* downloadHelper.m in Sources */,
+				FC2B912E17C888C60019863A /* S3SyncHelper.m in Sources */,
 				FC2B913217C88AF00019863A /* Constants.m in Sources */,
-				FC2B913717C9ADF60019863A /* S3RequestHandler.m in Sources */,
+				FC2B913717C9ADF60019863A /* S3RequestHelper.m in Sources */,
 				FCFA21AB17D1852B0007729B /* Reachability.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -326,9 +326,9 @@
 			buildActionMask = 2147483647;
 			files = (
 				FC2B911D17C870A90019863A /* downloadHelperTests.m in Sources */,
-				FC2B912F17C888C60019863A /* downloadHelper.m in Sources */,
+				FC2B912F17C888C60019863A /* S3SyncHelper.m in Sources */,
 				FC2B913317C88AF00019863A /* Constants.m in Sources */,
-				FC2B913617C9AB470019863A /* S3RequestHandler.m in Sources */,
+				FC2B913617C9AB470019863A /* S3RequestHelper.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

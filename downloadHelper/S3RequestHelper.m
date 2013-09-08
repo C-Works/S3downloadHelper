@@ -6,7 +6,8 @@
 //  Copyright (c) 2013 Jonathan Dring. All rights reserved.
 //
 
-#import "S3RequestHandler.h"
+#import "S3RequestHelper.h"
+#import "S3SyncHelper.h"
 #import <AWSRuntime/AWSRuntime.h>
 #import <AWSS3/AmazonS3Client.h>
 
@@ -18,20 +19,22 @@
 // ---------------------------------------------------------------------------------------------------------------------
 // Interface Definition
 // ---------------------------------------------------------------------------------------------------------------------
-@interface S3RequestHandler () <AmazonServiceRequestDelegate>
+@interface S3RequestHelper () <AmazonServiceRequestDelegate>
 {
     AmazonS3Client          *_client;                   // S3 Client to use for handling requests.
     S3ObjectSummary         *_S3Summary;                // S3 Summary object defines the object to download.
     NSString                *_bucket;                   // S3 bucket name to download the object from.
+    id <S3RequestHelperDelegateProtocol> _delegate;    // Delegate object to report back to.
+
     NSString                *_key;                      // S3 Object key extracted from S3Summary.
-    NSString                *_md5;                     // S3 MD5 extracted from the S3Summary.
+    NSString                *_md5;                      // S3 MD5 extracted from the S3Summary.
 
     NSString                *_downloadPath;             // Temporary file path to download file to.
     NSString                *_persistPath;              // Permanent file path to persist file to.
     NSOutputStream          *_outputStream;             // Filestream for the downloaded file request.
 
     int                     _attempts;                  // Counts failed attempts since last reset.
-    float                   _progress;                  // Defines the current download progress 0-1.0.
+    int                     _progress;                  // Defines the current download progress 0-100%.
     REQUEST_STATE           _state;                     // Defines the download state of the object.
     Boolean                 _blockComplete;             // Indicates if the current block is complete or not.
 
@@ -49,7 +52,7 @@
 // ---------------------------------------------------------------------------------------------------------------------
 // Class Implementation
 // ---------------------------------------------------------------------------------------------------------------------
-@implementation S3RequestHandler
+@implementation S3RequestHelper
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Synthesized Getters & Setters
@@ -57,11 +60,17 @@
 @synthesize progress        = _progress;                // Synthesized to allow reporting of the status to the user.
 @synthesize state           = _state;                   // Synthesized to allow the helper to determine next action.
 @synthesize key             = _key;                     // Syntehsized to allow the helper to determine the file paths.
+@synthesize md5             = _md5;                     // Syntehsized to allow the helper to validate downloads md5.
+
+@synthesize persistPath     = _persistPath;
+@synthesize downloadPath    = _downloadPath;
 
 @synthesize error           = _error;                   // Synthesized to allow helper to make decisions about next action.
 @synthesize exception       = _exception;               // Synthesized to allow helper to make decisions about next action.
 
-@synthesize md5             = _md5;
+// ---------------------------------------------------------------------------------------------------------------------
+// Initialisation Methods
+// ---------------------------------------------------------------------------------------------------------------------
 
 // Initialisater, creates a new Request handler a prepares to start. Download begins when dowload is called.
 -(id)initWithS3ObjectSummary:(S3ObjectSummary*)s S3Client:(AmazonS3Client*)c bucket:(NSString*)b  delegate:(id)d error:(NSError*)e
@@ -74,22 +83,22 @@
         _state              = INITIALISED;
         
         if ( !( _client     = c ) ) {
-            [self rhError:S3DH_RHANDLER_NIL_CLIENT data:nil error: &e ];
+            [self error:S3DH_RHANDLER_NIL_CLIENT data:nil error: &e ];
             return false;
         };
 
         if ( !( _bucket     = b ) ) {
-            [self rhError:S3DH_RHANDLER_NIL_BUCKET data:b error: &e ];
+            [self error:S3DH_RHANDLER_NIL_BUCKET data:b error: &e ];
             return false;
         }
         
         if ( !( _delegate   = d ) ) {
-            [self rhError:S3DH_RHANDLER_NIL_DELEGATE data:nil error: &e ];
+            [self error:S3DH_RHANDLER_NIL_DELEGATE data:nil error: &e ];
             return false;
         }
         
         if ( !( _S3Summary  = s ) ) {
-            [self rhError:S3DH_RHANDLER_NIL_SUMMARY data:nil error: &e ];
+            [self error:S3DH_RHANDLER_NIL_SUMMARY data:nil error: &e ];
             return false;
         };
         [self reset];
@@ -102,7 +111,7 @@
 // Public Control Methods
 // ---------------------------------------------------------------------------------------------------------------------
 
-// Reset will re-initialise the request from any state, delete all associated files and prepare for re-start.
+// Reset will re-initialise the request from any state, delete all invalid files and prepare for re-start.
 -(BOOL)reset{
     
     NSError *error;
@@ -118,7 +127,8 @@
     _key                    = _S3Summary.key;                   // Extract the file key from the S3Summary.
     _fileSize               = (NSInteger)_S3Summary.size;       // Extract the expected length from the S3Summary.
 
-    _md5                   = [_S3Summary.etag stringByTrimmingCharactersInSet: [NSCharacterSet characterSetWithCharactersInString:@"\""]];
+    _md5                   = [_S3Summary.etag stringByTrimmingCharactersInSet:
+                              [NSCharacterSet characterSetWithCharactersInString:@"\""]];
 
     _downloadPath           = [_delegate downloadPath: self];   // Obtain the save file path from the helper object.
     _persistPath            = [_delegate persistPath:  self];   // Obtain the temporary file path from the helper object
@@ -126,18 +136,33 @@
     // Clean up and open streams, old files and check that the filepath is writtable.
     if (_outputStream != nil)   [_outputStream close];          // Close any open stream.
     
-    [[NSFileManager defaultManager] removeItemAtPath: _downloadPath error: &error];
-    [[NSFileManager defaultManager] removeItemAtPath: _persistPath  error: &error];
 
-    if( ! [self createFolderForFilePath: _downloadPath] ){
-        [self rhError:S3DH_RHANDLER_FOLDER_FAIL data:nil error: &error ];
-        return false;
+    if( [ _delegate validateMD5forPersist: self ] ){
+        _state = SAVED;
+        [[NSFileManager defaultManager] removeItemAtPath: _downloadPath error: &error];
+        return true;
     }
-    if( ! [self createFolderForFilePath: _persistPath ] ){
-        [self rhError:S3DH_RHANDLER_FOLDER_FAIL data:nil error: &error ];
-        return false;
+    else if( [_delegate validateMD5forDownload:self] ){
+        _state = TRANSFERED;
+
+        if( ! [self createFolderForFilePath: _persistPath ] ){
+            [self error:S3DH_RHANDLER_FOLDER_FAIL data:nil error: &error ];
+            return false;
+        }
+
+        _state      = TRANSFERED;
+        _progress   = 100;
+        [_delegate downloadFinished: self];
+        return true;
     }
-    
+    else{
+        
+        [[NSFileManager defaultManager] removeItemAtPath: _downloadPath error: &error];
+        if( ! [self createFolderForFilePath: _downloadPath] ){
+            [self error:S3DH_RHANDLER_FOLDER_FAIL data:nil error: &error ];
+            return false;
+        }
+    }
     return true;
 }
 
@@ -148,6 +173,7 @@
     NSError *error;
     
     if ( ! [_delegate downloadEnable] ) return false;
+    if (!_blockComplete) return false;
     
     switch ( _state ) {
         case FAILED:        return false; break;
@@ -157,15 +183,17 @@
             break;
         case INITIALISED:
             if( ! (_outputStream = [ [ NSOutputStream alloc ] initToFileAtPath: _downloadPath append: NO ] ) ){
-                [self rhError:S3DH_RHANDLER_FILE_INIT_FAIL data:nil error: &error ];
+                [self error:S3DH_RHANDLER_FILE_INIT_FAIL data:nil error: &error ];
                 return false;
             }
             [_outputStream open];
             break;
         case SUSPENDED:
             if( ! (_outputStream = [ [ NSOutputStream alloc ] initToFileAtPath: _downloadPath append: YES ] ) ){
-                [_outputStream open];
+                [self error:S3DH_RHANDLER_FILE_STREAM_FAIL data:nil error: &error ];
+                return false;
             }
+            [_outputStream open];
             break;
     }
 
@@ -178,7 +206,7 @@
     
     // Initialise an S# request object to fetch the data for this block.
     if ( !( _getObjectRequest = [[S3GetObjectRequest alloc] initWithKey: _key withBucket: _bucket] ) ){
-        [self rhError:S3DH_RHANDLER_FILE_CREATE_FAIL data:nil error: &error ];
+        [self error:S3DH_RHANDLER_FILE_CREATE_FAIL data:nil error: &error ];
         return false;
     }
     _getObjectRequest.outputStream  = _outputStream;
@@ -217,8 +245,7 @@
 
 // Save the file if the transfer completed successfully, allows the helper to synchronise persisting of data.
 -(BOOL)persist{
-    NSError *error;
-    
+
     switch ( _state ) {
         case INITIALISED:   return false; break;
         case SUSPENDED:     return false; break;
@@ -228,10 +255,9 @@
         case TRANSFERED:    break;
     }
     
-    NSFileManager *fManager = [[NSFileManager alloc]init];
-    
-    if(!([ fManager moveItemAtPath:_downloadPath toPath:_persistPath error:&error])){
-        NSLog(@"Can't move downloaded item");
+    if( ! [_delegate persistFile:self] ) {
+        NSString *data = [[NSString alloc] initWithFormat:@"[Download:%@] [Persist:%@]", _downloadPath, _persistPath ];
+        [self error: S3DH_RHANDLER_FILE_PERSIST_FAIL data: data error: nil ];
         return false;
     }
     _state = SAVED;
@@ -246,7 +272,7 @@
 
     NSError *error;
     
-    if(!path) return false;
+    if( !path ) return false;
         
     NSMutableArray *splitPath = (NSMutableArray*)[path componentsSeparatedByString:@"/"];
     [splitPath removeLastObject];
@@ -259,140 +285,138 @@
     return true;
 }
 
-
 // ---------------------------------------------------------------------------------------------------------------------
 // PROTOCOL Methods - Amazon Service Request Delegate
 // ---------------------------------------------------------------------------------------------------------------------
+// Counts received bytes of data, when the is stream open, loaded into the file to determine next block start.
 -(void)request:(AmazonServiceRequest *)request didReceiveData:(NSData *)data{
-    if( _state == DOWNLOADING ){
+
+    int progress;
+    
+    if( _state == DOWNLOADING && [ request isKindOfClass:[ S3GetObjectRequest class ] ] ){
         _dataTransfered += [data length];
-        NSLog(@"Block Data: %d", _dataTransfered - 1);
-        //[_delegate progressChanged];
-    }
-    else{
-        NSLog(@"Data recieved but not saved");
+
+        if( _fileSize == 0.0 || _dataTransfered == 0.0)    progress = 0;
+        else   progress = (_dataTransfered * 100)/ _fileSize;
+        
+        Boolean didChange = ( progress != _progress );
+        _progress = progress;
+
+        if ( didChange && [_delegate respondsToSelector:@selector(progressChanged:)]){
+            [_delegate progressChanged: self];
+        }
     }
 }
 
--(void)request:(AmazonServiceRequest *)request didCompleteWithResponse:(AmazonServiceResponse *)aResponse
-{
-    // Close the stream, check there are no exceptions, if not set progress and status complete call the downloadFinished
-    // method on the delegate. If exceptions report exceptions and delete the temporary file.
+// Method handles end-of-block & either restarts or checks the md5 and sets the state to TRANSFERED.
+-(void)request:(AmazonServiceRequest *)request didCompleteWithResponse:(AmazonServiceResponse *)aResponse{
+    
     Boolean validRequest = [ request isKindOfClass:[ S3GetObjectRequest class ] ];
-    Boolean validMD5     = [ downloadHelper validateMD5forSummary: _S3Summary withPath: _downloadPath ];
+    Boolean validMD5     = [ _delegate validateMD5forDownload: self ];
     Boolean noException  = ( aResponse.exception == nil );
+    
+    // Set block complete flag to allow download to start the next block.
     _blockComplete       = YES;
     
-    NSLog(@"S3 MD5:%@", _md5 );
-    NSLog(@"FP MD5:%@", [downloadHelper fileMD5: _downloadPath]);
-    
-    NSUInteger stopLimit = _fileSize - 1;
-    
-    if( _blockRequestEnd > stopLimit ){
-        // report error - download over-ran server size.
+    // If the file lenght exceeds the AWS filesize, report error and fail download.
+    if( _blockRequestEnd > (_fileSize - 1) ){
+        [self error: S3DH_RHANDLER_FILE_PERSIST_FAIL data: _key error: nil ];
     }
     
-    if( ![ _delegate downloadEnable ] ){
+    // If the helper is disabled, or bucket unreachable, suspend download.
+    if( ![ _delegate downloadEnable ] ) {
         [self suspend];
-    }
     
-    switch ( _state ) {
-        case SUSPENDED:
-        case DOWNLOADING:
-            // If the Handler is downloading, restart the next block.
-            if( _blockRequestEnd < stopLimit ){
-                [self download];
-                NSLog(@"Helper State: Downloading - Restart");
-            }
-            else if( noException && validRequest && validMD5 ){
-                _state              = TRANSFERED;
-                _getObjectRequest   = nil;
-                _progress   = 1.0;
-                [_outputStream close];
-                [_delegate downloadFinished: self];
-            }
-            else{
-                [self failed ];
-            }
-            break;
-        case INITIALISED:
-            // Silent Error Log;
-            break;
-        case TRANSFERED:
-            // Silent Error Log;
-            break;
-        case SAVED:
-            // Silent Error Log;
-            break;
-        case FAILED:
-            // Exit without action.
-            break;
+    }else{
+        // Determine the download action for each request state.
+        switch ( _state ) {
+            case SUSPENDED:
+            case DOWNLOADING:
+                // If the Handler is downloading, restart the next block.
+                if( _blockRequestEnd < (_fileSize - 1) ){
+                    [self download];
+                }
+                else if( noException && validRequest && validMD5 ){
+                    _state              = TRANSFERED;
+                    _getObjectRequest   = nil;
+                    _progress   = 100;
+                    [_outputStream close];
+                    [_delegate downloadFinished: self];
+                }
+                else{
+                    // Download completed but with an error, exception or invalid md5.
+                    [self error: S3DH_RHANDLER_DOWNLOAD_ERROR data: _key error: nil ];
+                }
+                break;
+            case INITIALISED:        break;
+            case TRANSFERED:         break;
+            case SAVED:              break;
+            case FAILED:             break;
+        }
     }
 }
 
 -(void)request:(AmazonServiceRequest *)request didFailWithError:(NSError *)theError{
-    _error = theError;
-    [self interruptedDownload];
+    if( [ request isKindOfClass:[ S3GetObjectRequest class ] ] ){
+        _error = theError;
+        [self interruptedDownload];
+    }
 }
 
 -(void)request:(AmazonServiceRequest *)request didFailWithServiceException:(NSException *)theException{
-    _exception = theException;
-    [self interruptedDownload];
+    if( [ request isKindOfClass:[ S3GetObjectRequest class ] ] ){
+        _exception = theException;
+        [self interruptedDownload];
+    }
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
 // PROTOCOL - Support Methods
 // ---------------------------------------------------------------------------------------------------------------------
+
+// If the download is interrupted, this method determines if it should be suspended, reported or re-started.
 -(void)interruptedDownload{
     // if the connection is working check how many attempts
     if ( [_delegate downloadEnable] ){
         // If retrys is below threshold try again.
         if ( _attempts < DEFAULT_RETRY_LIMIT ){
+            // Re-start the dwonload and count the attempt.
             [self download];
             _attempts ++;
         }
         // If retrys is above threshold report failure.
         else{
-            [self failed];
+            [self error: S3DH_RHANDLER_RETRY_EXCEEDED data: _key error: nil ];
         }
     }
     // If un-reachable, suspend the download.
     else{
-        NSLog(@"[INTERRUPTED]:%@", _key );
         [ self suspend ];
     }
 }
 
--(void)failed{
-    [self failed:nil];
-}
-
--(void)failed:(NSError*)error{
-    _error              = error;
-    _state              = FAILED;
-    _getObjectRequest   = nil;
-    _progress           = 0.0;
-    [_outputStream close];
-    [_delegate downloadFailed: self ];
-}
 // ---------------------------------------------------------------------------------------------------------------------
 // Error Message Generation
 // ---------------------------------------------------------------------------------------------------------------------
-- (void) rhError:(int)code data:(NSString*)data error:(NSError**)errorp
+- (void) error:(int)code data:(NSString*)data error:(NSError**)errorp
 {
     NSMutableString *errorDesc = [[NSMutableString alloc]init];
     
     switch (code)
     {
-        case S3DH_RHANDLER_NIL_CLIENT:      [ errorDesc appendString: @"Init with null client." ];break;
-        case S3DH_RHANDLER_NIL_BUCKET:      [ errorDesc appendString: @"Init with null bucket." ];break;
-        case S3DH_RHANDLER_NIL_DELEGATE:    [ errorDesc appendString: @"Init with null delegate." ];break;
-        case S3DH_RHANDLER_NIL_SUMMARY:     [ errorDesc appendString: @"Init with null summary." ];break;
-        case S3DH_RHANDLER_FILE_UNWRITABLE: [ errorDesc appendString: @"Filepath unwrittable:" ];break;
-        case S3DH_RHANDLER_FILE_CREATE_FAIL:[ errorDesc appendString: @"File creation failure:" ];break;
-        case S3DH_RHANDLER_FOLDER_FAIL:     [ errorDesc appendString: @"Folder creation fail:" ];break;
-        default:                            [ errorDesc appendString: @"No reported errors! "  ]; break;
-            
+        case S3DH_RHANDLER_NIL_CLIENT:        [ errorDesc appendString: @"Init with null client." ];    break;
+        case S3DH_RHANDLER_NIL_BUCKET:        [ errorDesc appendString: @"Init with null bucket." ];    break;
+        case S3DH_RHANDLER_NIL_DELEGATE:      [ errorDesc appendString: @"Init with null delegate." ];  break;
+        case S3DH_RHANDLER_NIL_SUMMARY:       [ errorDesc appendString: @"Init with null summary." ];   break;
+        case S3DH_RHANDLER_FILE_UNWRITABLE:   [ errorDesc appendString: @"Filepath unwrittable:" ];     break;
+        case S3DH_RHANDLER_FILE_CREATE_FAIL:  [ errorDesc appendString: @"File creation failure:" ];    break;
+        case S3DH_RHANDLER_FOLDER_FAIL:       [ errorDesc appendString: @"Folder creation fail:" ];     break;
+        case S3DH_RHANDLER_FILE_STREAM_FAIL:  [ errorDesc appendString: @"Stream open fail:" ];         break;
+        case S3DH_RHANDLER_FILE_PERSIST_FAIL: [ errorDesc appendString: @"File Persist Fail:" ];        break;
+        case S3DH_RHANDLER_FILE_DL_OVERRUN:   [ errorDesc appendString: @"Download over-ran:" ];        break;
+        case S3DH_RHANDLER_DOWNLOAD_ERROR:    [ errorDesc appendString: @"Download with error:" ];      break;
+        case S3DH_RHANDLER_RETRY_EXCEEDED:    [ errorDesc appendString: @"Exceeded Retry Limit:" ];     break;
+        default:                              [ errorDesc appendString: @"No reported errors! "  ];     break;
     }
     
     NSMutableDictionary *userInfo = [[ NSMutableDictionary alloc ] init ];
@@ -408,17 +432,14 @@
     *errorp = [ NSError  errorWithDomain: S3DH_RHANDLER_DOMAIN code:code userInfo:userInfo ];
     
     // Clean up the object and downloads.
-    
     _error              = *errorp;
     _state              = FAILED;
     _getObjectRequest   = nil;
     _progress           = 0.0;
     [_outputStream close];
     [_delegate downloadFailed: self ];
-
-    
-    
 }
+// ---------------------------------------------------------------------------------------------------------------------
 
 @end
 

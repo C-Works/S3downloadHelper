@@ -7,14 +7,14 @@
 //
 
 #import <UIKit/UIKit.h>
-#import "downloadHelper.h"
+#import "S3SyncHelper.h"
 
 
 @interface AppDelegate : UIResponder <UIApplicationDelegate>
 
 @property (strong, nonatomic) UIWindow *window;
 
-@property (nonatomic, strong) downloadHelper *d;
+@property (nonatomic, strong) S3SyncHelper *d;
 @property (nonatomic, strong) AmazonS3Client *s3;
 
 
