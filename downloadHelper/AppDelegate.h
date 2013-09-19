@@ -8,9 +8,10 @@
 
 #import <UIKit/UIKit.h>
 #import "S3SyncHelper.h"
+#import "S3downloadHelperDelegateProtocol.h"
 
 
-@interface AppDelegate : UIResponder <UIApplicationDelegate>
+@interface AppDelegate : UIResponder <UIApplicationDelegate, S3downloadHelperDelegateProtocol>
 
 @property (strong, nonatomic) UIWindow *window;
 

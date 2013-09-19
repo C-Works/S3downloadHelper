@@ -7,6 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		FC03DC9517DF51F000C9D6CA /* S3DownloadHelper.m in Sources */ = {isa = PBXBuildFile; fileRef = FC03DC9417DF51F000C9D6CA /* S3DownloadHelper.m */; };
+		FC03DC9617DF51F000C9D6CA /* S3DownloadHelper.m in Sources */ = {isa = PBXBuildFile; fileRef = FC03DC9417DF51F000C9D6CA /* S3DownloadHelper.m */; };
+		FC03DC9917DF535300C9D6CA /* S3AsyncHelper.m in Sources */ = {isa = PBXBuildFile; fileRef = FC03DC9817DF535300C9D6CA /* S3AsyncHelper.m */; };
+		FC03DC9A17DF535300C9D6CA /* S3AsyncHelper.m in Sources */ = {isa = PBXBuildFile; fileRef = FC03DC9817DF535300C9D6CA /* S3AsyncHelper.m */; };
 		FC2B90EC17C870A90019863A /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FC2B90EB17C870A90019863A /* UIKit.framework */; };
 		FC2B90EE17C870A90019863A /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FC2B90ED17C870A90019863A /* Foundation.framework */; };
 		FC2B90F017C870A90019863A /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FC2B90EF17C870A90019863A /* CoreGraphics.framework */; };
@@ -48,6 +52,11 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		FC03DC9217DF4FF600C9D6CA /* S3downloadHelperDelegateProtocol.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = S3downloadHelperDelegateProtocol.h; sourceTree = "<group>"; };
+		FC03DC9317DF51F000C9D6CA /* S3DownloadHelper.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = S3DownloadHelper.h; sourceTree = "<group>"; };
+		FC03DC9417DF51F000C9D6CA /* S3DownloadHelper.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = S3DownloadHelper.m; sourceTree = "<group>"; };
+		FC03DC9717DF535300C9D6CA /* S3AsyncHelper.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = S3AsyncHelper.h; sourceTree = "<group>"; };
+		FC03DC9817DF535300C9D6CA /* S3AsyncHelper.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = S3AsyncHelper.m; sourceTree = "<group>"; };
 		FC2B90E817C870A90019863A /* downloadHelper.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = downloadHelper.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		FC2B90EB17C870A90019863A /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
 		FC2B90ED17C870A90019863A /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
@@ -154,13 +163,18 @@
 				FC2B910317C870A90019863A /* MainStoryboard.storyboard */,
 				FC2B910617C870A90019863A /* ViewController.h */,
 				FC2B910717C870A90019863A /* ViewController.m */,
+				FC03DC9217DF4FF600C9D6CA /* S3downloadHelperDelegateProtocol.h */,
+				FC03DC9317DF51F000C9D6CA /* S3DownloadHelper.h */,
+				FC03DC9417DF51F000C9D6CA /* S3DownloadHelper.m */,
 				FC2B912C17C888C60019863A /* S3SyncHelper.h */,
 				FC2B912D17C888C60019863A /* S3SyncHelper.m */,
+				FC03DC9717DF535300C9D6CA /* S3AsyncHelper.h */,
+				FC03DC9817DF535300C9D6CA /* S3AsyncHelper.m */,
 				FC2B913017C88AF00019863A /* Constants.h */,
 				FC2B913117C88AF00019863A /* Constants.m */,
-				FCFA217617CA45490007729B /* S3RequestHelperDelegateProtocol.h */,
 				FCFA21A917D1852B0007729B /* Reachability.h */,
 				FCFA21AA17D1852B0007729B /* Reachability.m */,
+				FCFA217617CA45490007729B /* S3RequestHelperDelegateProtocol.h */,
 				FC2B913417C9AB470019863A /* S3RequestHelper.h */,
 				FC2B913517C9AB470019863A /* S3RequestHelper.m */,
 				FC2B90F217C870A90019863A /* Supporting Files */,
@@ -318,6 +332,8 @@
 				FC2B913217C88AF00019863A /* Constants.m in Sources */,
 				FC2B913717C9ADF60019863A /* S3RequestHelper.m in Sources */,
 				FCFA21AB17D1852B0007729B /* Reachability.m in Sources */,
+				FC03DC9517DF51F000C9D6CA /* S3DownloadHelper.m in Sources */,
+				FC03DC9917DF535300C9D6CA /* S3AsyncHelper.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -329,6 +345,8 @@
 				FC2B912F17C888C60019863A /* S3SyncHelper.m in Sources */,
 				FC2B913317C88AF00019863A /* Constants.m in Sources */,
 				FC2B913617C9AB470019863A /* S3RequestHelper.m in Sources */,
+				FC03DC9617DF51F000C9D6CA /* S3DownloadHelper.m in Sources */,
+				FC03DC9A17DF535300C9D6CA /* S3AsyncHelper.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

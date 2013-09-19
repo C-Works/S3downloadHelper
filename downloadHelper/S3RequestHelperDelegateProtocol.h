@@ -12,10 +12,11 @@
 
 
 typedef enum{
-    dhDOWNLOADING,
+    dhINITIALISED,
+    dhUPDATED,
+    dhSYNCHRONISED,
+    dhSYNCHRONISING,
     dhSUSPENDED,
-    dhCOMPLETE,
-    dhINITIALISED
 } SYNC_STATUS;
 
 
@@ -62,6 +63,8 @@ typedef enum{
     to another location etc.
  */
 - (BOOL)persistFile:(S3RequestHelper*)s3rh;
+
+- (BOOL)deleteFile:(S3RequestHelper*)s3rh;
 
 /** Notifies the initiating helper that the download has failed, the details of the failure can be
     obtained from the error and exception properties of the S3RequestHelper passed. 

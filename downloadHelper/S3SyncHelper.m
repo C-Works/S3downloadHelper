@@ -8,6 +8,7 @@
 
 #import "S3SyncHelper.h"
 #import "S3RequestHelper.h"
+#import "S3downloadHelperDelegateProtocol.h"
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Module Definitions
@@ -19,14 +20,18 @@
 // ---------------------------------------------------------------------------------------------------------------------
 @interface S3SyncHelper () <S3RequestHelperDelegateProtocol>
 {
-    AmazonS3Client      *_s3;               
-    NSString            *_bucket;
-    
+    AmazonS3Client      *_s3;                       // Amazon client used to connect, provided during initialisation.
+    NSString            *_bucket;                   // Amazon bucket name to download, provided during initialisation.
+    id <S3downloadHelperDelegateProtocol> _delegate;// Delegate object to report back to.
+
     int                 _retryTime;
     
     NSArray             *_S3BucketObjectList;
     NSMutableDictionary *_S3RequestHelpers;
-
+    
+    NSMutableDictionary *_S3ActiveHelpers;
+    NSMutableDictionary *_S3SleepingHelpers;
+    
     NSMutableDictionary *_S3ObjectSummaries;
 
     Reachability        *_bucketReachability;           // Reachability status for the specified bucked and location.
@@ -49,21 +54,23 @@
 // ---------------------------------------------------------------------------------------------------------------------
 // Initialisation Methods
 // ---------------------------------------------------------------------------------------------------------------------
-- (id)initWithS3Client:(AmazonS3Client*)client forBucket:(NSString*)bucket
+- (id)initWithS3Client:(AmazonS3Client*)c forBucket:(NSString*)b delegate:(id)d
 {
     self = [super init];
     if( self ){
         
-        if ( ! client ) return nil;
-        if ( ! bucket ) return nil;
+        if ( ! ( _s3       = c ) ) return nil;
+        if ( ! ( _bucket   = b ) ) return nil;
+        if ( ! ( _delegate = d ) ) return nil;
         
-        _s3            = client;
-        _bucket        = bucket;
         _retryTime     = DEFAULT_RETRY_TIME;
         _status        = dhINITIALISED;
         _isEnabled     = YES;
-        
-        _S3RequestHelpers  = [[NSMutableDictionary alloc] init];
+
+        _S3ActiveHelpers    = [[NSMutableDictionary alloc] init];
+        _S3SleepingHelpers  = [[NSMutableDictionary alloc] init];
+
+        _S3RequestHelpers   = [[NSMutableDictionary alloc] init];
         _S3ObjectSummaries  = [[NSMutableDictionary alloc] init];
         
         // Get the bucket host for reachability observer from a urlRequest object
@@ -78,14 +85,15 @@
         __weak typeof(self) weakSelf = self;
         _bucketReachability.reachableBlock = ^(Reachability*reach){
             NSLog(@"S3 Bucket REACHABLE!");
-            [weakSelf resumeSynchronisation];
+            [weakSelf performSelectorInBackground:@selector(updateRequestHelpers) withObject:nil];
+            
+//            [weakSelf isReachable ];
         };
         
         _bucketReachability.unreachableBlock = ^(Reachability*reach){
             NSLog(@"S3 Bucket UNREACHABLE!");
-            [weakSelf suspendSynchronisation];
+            [weakSelf isUnreachable];
         };
-
         [_bucketReachability startNotifier];
     }
     return self;
@@ -94,96 +102,126 @@
 // ---------------------------------------------------------------------------------------------------------------------
 // Public Control Methods
 // ---------------------------------------------------------------------------------------------------------------------
--(void)resumeSynchronisation{
-    if ( [ _bucketReachability isReachable] && _status != dhDOWNLOADING && _status != dhCOMPLETE ){
-        NSLog(@"synchronisationResumed");
-        _status = dhDOWNLOADING;
-        _isEnabled = YES;
-        [self performSelectorInBackground:@selector(asyncSynchroniseBucket) withObject:nil];
-    }
-}
-
-- (void)suspendSynchronisation{
+- (void)isUnreachable{
+    
     if( _status != dhSUSPENDED ){
         _status = dhSUSPENDED;
         _isEnabled = NO;
-        NSLog(@"synchronisationSuspended");
-        
-        for( NSString *key in _S3RequestHelpers )
-        {
-            S3RequestHelper *s3rh      = [ _S3RequestHelpers objectForKey: key ];
-            switch (s3rh.state) {
-                case INITIALISED:
-                    NSLog(@"[INITIALISED]:%@", key);
-                    break;
-                case DOWNLOADING:
-                    NSLog(@"Suspend:%@", key);
-                    [s3rh suspend];
-                    break;
-                case SUSPENDED:
-                    NSLog(@"[SUSPENDED]:%@", key);
-                    break;
-                case TRANSFERED:
-                    NSLog(@"[COMPLETE]:%@", key);
-                    break;
-                case SAVED:
-                    NSLog(@"[CANCELLED]:%@", key);
-                    break;
-                case FAILED:
-                    NSLog(@"[FAILED]:%@", key);
-                    break;
-            }
+
+        NSLog(@"Suspend all downloads");
+        for( NSString *key in _S3RequestHelpers ){
+            S3RequestHelper *s3rh = [_S3RequestHelpers objectForKey:key  ];
+            [s3rh suspend];
         }
     }
 }
 
-
--(void)asyncSynchroniseBucket{
-    _S3BucketObjectList = [_s3 listObjectsInBucket: _bucket ];
-    [self performSelectorOnMainThread:@selector(syncSynchroniseBucket) withObject:nil waitUntilDone:NO];
-}
-
--(void)syncSynchroniseBucket{
+// Fetches the latest bucket list and updates the S3RequestHanlers dictionary.
+-(void)updateRequestHelpers{
     NSError *error;
     
-    // Clear Object Summaries and process S3ObjectList for non folder items.
-    _S3ObjectSummaries  = [[NSMutableDictionary alloc] init];
-    
-    for( S3ObjectSummary *S3summary in _S3BucketObjectList ){
-        if( ! [S3summary.key hasSuffix: @"/" ] ){
-            [ _S3ObjectSummaries setObject: S3summary forKey: S3summary.key ];
-        }
-    }
-    
-    // Generate new S3RequestHelpers dictionary from existing and new handlers.
-    NSMutableDictionary *refreshedS3RequestHelpers = [[NSMutableDictionary alloc] init];
-    for( NSString *key in _S3ObjectSummaries ){
-        
-        S3ObjectSummary *S3summary  = [ _S3ObjectSummaries objectForKey: key ];
-        S3RequestHelper *s3rh      = [ _S3RequestHelpers objectForKey: key ];
-        
-        if( !s3rh ){
-            s3rh = [[S3RequestHelper alloc] initWithS3ObjectSummary:S3summary S3Client:_s3 bucket:_bucket delegate:self error:error];
-        }
-        [s3rh download];
+    [_s3 setConnectionTimeout: (NSTimeInterval) 60.0 ];
 
-        [ refreshedS3RequestHelpers setObject: s3rh forKey: key ];
-        [_S3RequestHelpers removeObjectForKey: S3summary.key ];
+    @try{
+        _S3BucketObjectList = [_s3 listObjectsInBucket: _bucket ];
+    }
+    @catch ( AmazonServiceException *serviceException ) {
+        NSLog(@"Service Exception Occured: %@", serviceException.errorCode);
+        [_delegate bucketListUpdateFailed:self];
+    }
+    @catch (AmazonClientException *clientException) {
+        NSLog(@"Client Exception Occured: %@", clientException.error.localizedDescription);
+        [_delegate bucketListUpdateFailed:self];
+    }
+    @finally {
+        
+        BOOL bucketlistDidChange = false;
+        
+        // Clear Object Summaries and process S3ObjectList for non folder items.
+        NSMutableDictionary *S3RefreshedHelpers = [[NSMutableDictionary alloc] init];
+        for( S3ObjectSummary *S3summary in _S3BucketObjectList ){
+            if( ! [S3summary.key hasSuffix: @"/" ] ){
+
+                S3RequestHelper *s3rh      = [ _S3RequestHelpers objectForKey: S3summary.key ];
+                if( !s3rh ){
+                    s3rh = [[S3RequestHelper alloc] initWithS3ObjectSummary:S3summary S3Client:_s3 bucket:_bucket delegate:self error:error];
+                    bucketlistDidChange = true;
+                }
+                [ S3RefreshedHelpers setObject: s3rh forKey: S3summary.key ];
+                [_S3RequestHelpers removeObjectForKey: S3summary.key ];
+            }
+        }
+        
+        // Cancel Orphans and update the request helpers list.
+        for (S3RequestHelper *s3rh in _S3RequestHelpers ) {
+            bucketlistDidChange = true;
+            [s3rh cancel];
+        }
+        _S3RequestHelpers = S3RefreshedHelpers;
+
+        
+        switch (_status) {
+            case dhINITIALISED:
+                _status = dhUPDATED;
+                break;
+            case dhUPDATED:         break;
+            case dhSYNCHRONISED:    break;
+            case dhSYNCHRONISING:   break;
+            case dhSUSPENDED:       break;
+        }
+
+        if(bucketlistDidChange){
+            [_delegate bucketlistDidUpdate];
+        }
+        
+        // Call the delegate and inform it that the bucklist update is ready.
+        
+    }
+}
+
+-(void)synchronise{
+    
+    if( _status == dhUPDATED || _status == dhSYNCHRONISED ){
+
+        _isEnabled = true;
+        _status = dhSYNCHRONISING;
+        for( NSString *key in _S3RequestHelpers ){
+            S3RequestHelper *s3rh      = [ _S3RequestHelpers objectForKey: key ];
+            [s3rh synchronise];
+        }
+        
+    }
+
+}
+
+-(void)includeAll{
+    for( NSString *key in _S3RequestHelpers ){
+
+        [ self includeKey: key ];
+    }
+}
+
+-(BOOL)includeKey:(NSString*)key{
+    
+    S3RequestHelper *s3rh = [ _S3RequestHelpers objectForKey: key ];
+
+    if ( ! [_S3ActiveHelpers objectForKey: key] ) {
+        [_S3ActiveHelpers setObject:s3rh forKey:key];
     }
     
-    // Purge out-of-date handlers, reset them before deleting and then copy new handler list to old handler list.
-    for( NSString *key in _S3ObjectSummaries ){
-        [[ _S3RequestHelpers objectForKey: key ] reset ];
-        [ _S3RequestHelpers removeObjectForKey: key ];
+    if ( [_S3SleepingHelpers objectForKey: key] ){
+        [_S3SleepingHelpers removeObjectForKey: key];
     }
-    _S3RequestHelpers = refreshedS3RequestHelpers;
+    
 }
+
 
 // ---------------------------------------------------------------------------------------------------------------------
 // PROTOCOL Methods - S3RequestHelperDelegateProtocol
 // ---------------------------------------------------------------------------------------------------------------------
 -(BOOL)downloadEnable{
-    return _bucketReachability.isReachable && _isEnabled;
+    BOOL enabled =_bucketReachability.isReachable && _isEnabled;
+    return enabled;
 }
 
 -(NSString*)downloadPath:(S3RequestHelper*)s3rh{
@@ -238,7 +276,7 @@
     NSLog(@"Download Failed Error: %@", s3rh.error.localizedDescription );
     
     [s3rh reset];
-    [s3rh download];
+    [s3rh synchronise];
 }
 
 - (void)progressChanged:(S3RequestHelper*)s3rh{
@@ -251,6 +289,14 @@
     NSFileManager *fManager = [[NSFileManager alloc]init];
     
     return [ fManager moveItemAtPath:s3rh.downloadPath toPath:s3rh.persistPath error: nil ];    
+}
+
+- (BOOL)deleteFile:(S3RequestHelper *)s3rh{
+
+    NSFileManager *fManager = [[NSFileManager alloc]init];
+    
+    return [ fManager removeItemAtPath:s3rh.downloadPath error: nil ];
+    
 }
 
 // ---------------------------------------------------------------------------------------------------------------------

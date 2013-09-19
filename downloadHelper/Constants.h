@@ -10,7 +10,11 @@
 
 @interface Constants : NSObject
 
+//Invalid
+//#define dhKey      @"BKIAJGDSMHNMAOKSAMVA"
+//#define dhSec      @"j2vehxyraRNGWBieKEIqvw6acVDRLMxftyffYE+w"
 
+// Valid
 #define dhKey      @"AKIAJGDSMHNMAOKSAMVA"
 #define dhSec      @"i2vehxyraRNGWBieKEIqvw6acVDRLMxftyffYE+w"
 

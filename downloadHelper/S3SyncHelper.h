@@ -23,12 +23,15 @@
 
 @interface S3SyncHelper : NSObject <S3RequestHelperDelegateProtocol>
 
-- (id)initWithS3Client:(AmazonS3Client*)client forBucket:(NSString*)bucket;
+- (id)initWithS3Client:(AmazonS3Client*)c forBucket:(NSString*)b delegate:(id)d;
 
 - (void) resumeSynchronisation;
 - (void) suspendSynchronisation;
 
 
+
+-(void)includeAll;
+-(void)synchronise;
 
 @property (strong, atomic) Reachability             *bucketReachability;
 @property (atomic, readonly) SYNC_STATUS            status;
@@ -41,6 +44,7 @@
 
 - (NSString*)downloadPath:(S3RequestHelper*)s3rh;
 - (NSString*)persistPath:(S3RequestHelper*)s3rh;
+
 
 - (BOOL)validateMD5forDownload:(S3RequestHelper*)s3rh;
 - (BOOL)validateMD5forPersist:(S3RequestHelper*)s3rh;
